@@ -64,4 +64,7 @@ export class CreateGroupDTO {
 
   @IsOptional()
   parent?: Types.ObjectId;
+
+  @IsOptional()
+  key?: number;
 }

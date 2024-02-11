@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Res, Query, Req } from '@nestjs/common';
+import { Controller, Get, Post, Res, Query, Req, Body } from '@nestjs/common';
 import { GroupService } from '../services/group.service';
 import { Created, errorResponse, Success, sendResponse } from 'utils';
 import { CreateGroupDTO, GetGroupDTO, GetGroupDTOPipe } from '../dto/group.dto';
@@ -135,10 +135,8 @@ export class GroupController {
   async getGroups(
     @Res() res: Response,
     @Query(GetGroupDTOPipe) query: GetGroupDTO,
-    @Req() req: Request,
   ) {
     try {
-      console.log(req.user);
       const list = await this.groupService.aggregateGroups(
         getGroupPipeline(query),
       );
@@ -178,8 +176,6 @@ export class GroupController {
   ) {
     try {
       const result = await this.groupService.createGroup(body);
-
-      // await this.groupService.createGroupChangelog(result, req.user.id);
 
       await sendResponse(
         res,
