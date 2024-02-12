@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GroupController } from '../controllers/group.controller';
-import { GroupService } from '../services/group.service';
+import { GroupController } from '../controllers/role.controller';
+import { GroupService } from '../services/role.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { MongooseConfigService } from '../db/db.config';
 import { REQUEST } from '@nestjs/core';

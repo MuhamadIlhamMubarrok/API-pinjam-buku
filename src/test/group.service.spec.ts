@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GroupService } from '../services/group.service';
+import { GroupService } from '../services/role.service';
 import { MongooseConfigService } from '../db/db.config';
 import { getModelToken } from '@nestjs/mongoose';
 import { Request } from 'express';

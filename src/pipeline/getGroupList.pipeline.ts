@@ -1,9 +1,13 @@
-import { GetGroupDTO } from 'src/dto/group.dto';
-import { FacetPipelineBuilder, PipelineBuilder } from 'utils';
-import { generateArrayFilter, generateSearchCondition } from 'utils';
+import { GetRolesDTO } from 'src/dto/role.dto';
+import {
+  FacetPipelineBuilder,
+  PipelineBuilder,
+  generateArrayFilter,
+  generateSearchCondition,
+} from 'utils';
 
-const getGroupListPipeline = (query: GetGroupDTO) => {
-  const { page, limit, search, sortBy, sortOrder, brands } = query;
+const getGroupListPipeline = (query: GetRolesDTO) => {
+  const { page, limit, search, sortBy, sortOrder, groups } = query;
   return new PipelineBuilder()
     .match({
       isDeleted: false,
@@ -28,7 +32,7 @@ const getGroupListPipeline = (query: GetGroupDTO) => {
       key: 1,
     })
     .match({
-      'brands.key': generateArrayFilter(brands as number[]),
+      'brands.key': generateArrayFilter(groups as number[]),
     })
     .match({
       $or: [{ name: generateSearchCondition(search) }],

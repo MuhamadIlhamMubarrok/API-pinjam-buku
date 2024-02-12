@@ -1,8 +1,9 @@
 import { Injectable, PipeTransform } from '@nestjs/common';
 import { IsString, IsDefined, IsOptional } from 'class-validator';
 import { Types } from 'mongoose';
+import { parseAndAssign } from '../utils/test.utils';
 
-export class GetGroupDTO {
+export class GetRolesDTO {
   @IsOptional()
   search?: string;
 
@@ -13,10 +14,10 @@ export class GetGroupDTO {
   limit?: string | number;
 
   @IsOptional()
-  brands?: number[] | string;
+  groups?: number[] | string;
 
   @IsOptional()
-  models?: number[] | string;
+  isActive?: boolean[] | string;
 
   @IsOptional()
   sortBy?: string;
@@ -26,28 +27,23 @@ export class GetGroupDTO {
 }
 
 @Injectable()
-export class GetGroupDTOPipe implements PipeTransform {
-  transform(query: GetGroupDTO): GetGroupDTO {
-    const { limit, page, sortOrder, models, brands } = query;
+export class GetRolesDTOPipe implements PipeTransform {
+  transform(query: GetRolesDTO): GetRolesDTO {
+    const { limit, page, sortOrder, groups, isActive } = query;
 
-    if (limit) {
-      query.limit = parseInt(limit as string);
-    }
-
-    if (page) {
-      query.page = parseInt(page as string);
-    }
+    parseAndAssign(query, 'limit', limit, 'intParse');
+    parseAndAssign(query, 'page', page, 'intParse');
 
     if (sortOrder) {
       query.sortOrder = parseInt(sortOrder as string);
     }
 
-    if (models) {
-      query.models = JSON.parse(models as string);
+    if (groups) {
+      query.groups = JSON.parse(groups as string);
     }
 
-    if (brands) {
-      query.brands = JSON.parse(brands as string);
+    if (isActive) {
+      query.isActive = JSON.parse(isActive as string);
     }
 
     return query;
