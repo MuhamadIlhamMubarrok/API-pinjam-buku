@@ -1,7 +1,7 @@
-import { Inject, Injectable, Scope } from '@nestjs/common';
-import { REQUEST } from '@nestjs/core';
-import { Request } from 'express';
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage } from 'mongoose';
+<<<<<<< HEAD:src/services/role.service.ts
 import { IGroup, IRole } from 'schemas';
 import { MongooseConfigService } from '../db/db.config';
 import { CreateGroupDTO } from 'src/dto/role.dto';
@@ -21,10 +21,22 @@ export class RoleService {
     );
     this.roleModel = connection.model('role', RoleSchema, 'roles');
   }
+=======
+import { IGroup } from 'schemas';
+import { CreateGroupDTO } from 'src/dto/group.dto';
+
+@Injectable()
+export class GroupService {
+  constructor(
+    @InjectModel('groups', 'companyConnection')
+    private groupModel: Model<IGroup>,
+  ) {}
+>>>>>>> parent of f638c27 (feat: add request scoped service with connection):src/services/group.service.ts
 
   async aggregateGroups(pipeline: PipelineStage[]) {
     return await this.roleModel.aggregate(pipeline);
   }
+<<<<<<< HEAD:src/services/role.service.ts
 
   async generateKey(): Promise<number> {
     const group = await this.roleModel
@@ -40,5 +52,9 @@ export class RoleService {
   async createGroup(data: CreateGroupDTO): Promise<IGroup> {
     const key = await this.generateKey();
     return await this.roleModel.create({ ...data, key });
+=======
+  async createGroup(data: CreateGroupDTO): Promise<IGroup> {
+    return await this.groupModel.create(data);
+>>>>>>> parent of f638c27 (feat: add request scoped service with connection):src/services/group.service.ts
   }
 }

@@ -1,69 +1,83 @@
 import { Test, TestingModule } from '@nestjs/testing';
+<<<<<<< HEAD
 import { GroupService } from '../services/role.service';
 import { MongooseConfigService } from '../db/db.config';
+=======
+>>>>>>> parent of f638c27 (feat: add request scoped service with connection)
 import { getModelToken } from '@nestjs/mongoose';
-import { Request } from 'express';
-import * as mongoose from 'mongoose';
-import { ContextIdFactory, REQUEST } from '@nestjs/core';
+import { GroupService } from '../services/group.service';
+import { CreateGroupDTO } from '../dto/group.dto';
 
 describe('GroupService', () => {
-  let groupService: GroupService;
-  let module: TestingModule;
+  let service: GroupService;
 
-  const mockRequest: Request = {
-    user: {
-      companyCode: 'testCompany',
-    },
-  } as Request;
-
-  const mockGroupModel = {
-    aggregate: jest.fn(),
+  const MockModel = {
+    aggregate: jest.fn().mockReturnThis(),
+    findOne: jest.fn().mockReturnThis(),
+    find: jest.fn().mockReturnThis(),
+    findByIdAndUpdate: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    exec: jest.fn(),
+    create: jest.fn(),
+    updateOne: jest.fn(),
+    sort: jest.fn(),
   };
 
+  const title = 'should have correct output';
+
   beforeEach(async () => {
-    module = await Test.createTestingModule({
+    const module: TestingModule = await Test.createTestingModule({
       providers: [
         GroupService,
-        MongooseConfigService,
+
         {
           provide: getModelToken('groups'),
-          useValue: mockGroupModel,
-        },
-        {
-          provide: REQUEST,
-          useValue: mockRequest,
+          useValue: MockModel,
         },
       ],
-    })
+    }).compile();
 
-      .compile();
-
-    const contextId = ContextIdFactory.create();
-    jest
-      .spyOn(ContextIdFactory, 'getByRequest')
-      .mockImplementation(() => contextId);
-
-    groupService = await module.resolve<GroupService>(GroupService, contextId);
+    service = module.get<GroupService>(GroupService);
   });
 
-  afterAll(async () => {
-    for (const connection of mongoose.connections) {
-      await connection.close();
-    }
+  describe('aggregateGroup', () => {
+    it(title, async () => {
+      const modelSpy = jest.spyOn(MockModel, 'aggregate');
+      modelSpy.mockResolvedValueOnce([
+        {
+          _id: 'mockId',
+          name: 'mockName',
+        },
+      ]);
+
+      await service.aggregateGroups([{ $match: {} }]);
+
+      expect(modelSpy).toHaveBeenCalled();
+    });
   });
 
-  describe('aggregateGroups', () => {
-    it('should call aggregate on the groupModel', async () => {
-      const mockPipeline = [{ $match: {} }];
-      jest
-        .spyOn(mockGroupModel, 'aggregate')
-        .mockImplementationOnce(
-          () => Promise.resolve([{ _id: 'a', name: 'b', key: 1 }]) as any,
-        );
+  describe('createGroup', () => {
+    it(title, async () => {
+      const dto: CreateGroupDTO = {
+        name: 'A',
+        quota: 1,
+      };
 
-      await groupService.aggregateGroups(mockPipeline);
+      const modelSpy = jest.spyOn(MockModel, 'create');
+      modelSpy.mockResolvedValueOnce({
+        _id: 'mockId',
+        name: 'mockName',
+      });
 
-      expect(groupService).toBeDefined();
+      const result = await service.createGroup(dto);
+
+      expect(modelSpy).toHaveBeenCalled();
+      expect(result).toEqual(
+        expect.objectContaining({
+          _id: expect.any(String),
+          name: expect.any(String),
+        }),
+      );
     });
   });
 });

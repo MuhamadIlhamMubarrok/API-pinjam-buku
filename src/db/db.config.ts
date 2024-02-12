@@ -17,8 +17,4 @@ export class MongooseConfigService {
     const connection = this.getConnection(dbUri);
     return connection.model(name, schema);
   }
-
-  closeConnection() {
-    this.connections.clear();
-  }
 }
