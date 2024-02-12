@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Res, Query, Req, Body } from '@nestjs/common';
-import { GroupService } from '../services/group.service';
+import { RoleService } from '../services/role.service';
 import { Created, errorResponse, Success, sendResponse } from 'utils';
-import { CreateGroupDTO, GetGroupDTO, GetGroupDTOPipe } from '../dto/group.dto';
+import { CreateGroupDTO, GetRolesDTO, GetRolesDTOPipe } from '../dto/role.dto';
 import { Request, Response } from 'express';
 import getGroupPipeline from '../pipeline/getGroupList.pipeline';
 import {
@@ -12,14 +12,14 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-@ApiTags('Group')
+@ApiTags('Role')
 @ApiBearerAuth('access-token')
 @Controller('/v2/')
-export class GroupController {
-  constructor(private groupService: GroupService) {}
+export class RoleController {
+  constructor(private groupService: RoleService) {}
 
   @Get('/')
-  @ApiQuery({ name: 'Query params', type: GetGroupDTO })
+  @ApiQuery({ name: 'Query params', type: GetRolesDTO })
   @ApiQuery({
     name: 'page',
     type: Number,
@@ -131,10 +131,12 @@ export class GroupController {
       },
     },
   })
-  //Get group list for table
-  async getGroups(
+
+  //Get role list for table
+  async getRoleList(
+    @Req() req: Request,
     @Res() res: Response,
-    @Query(GetGroupDTOPipe) query: GetGroupDTO,
+    @Query(GetRolesDTOPipe) query: GetRolesDTO,
   ) {
     try {
       const list = await this.groupService.aggregateGroups(

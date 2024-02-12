@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { GroupController } from '../controllers/group.controller';
-import { GroupService } from '../services/group.service';
+import { RoleController } from '../controllers/role.controller';
+import { RoleService } from '../services/role.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MongooseConfigService } from '../db/db.config';
 
 @Module({
   imports: [MongooseModule.forRoot(`mongodb://127.0.0.1:27017/tagsamurai`)],
-  controllers: [GroupController],
-  providers: [GroupService, MongooseConfigService],
+  controllers: [RoleController],
+  providers: [RoleService, MongooseConfigService],
 })
-export class GroupModule {}
+export class RoleModule {}
