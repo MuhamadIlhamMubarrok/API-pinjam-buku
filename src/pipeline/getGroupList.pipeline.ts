@@ -1,4 +1,4 @@
-import { GetRolesDTO } from 'src/dto/role.dto';
+import { GetGroupDTO } from 'src/dto/group.dto';
 import {
   FacetPipelineBuilder,
   PipelineBuilder,
@@ -6,7 +6,7 @@ import {
   generateSearchCondition,
 } from 'utils';
 
-const getGroupListPipeline = (query: GetRolesDTO) => {
+const getGroupListPipeline = (query: GetGroupDTO) => {
   const { page, limit, search, sortBy, sortOrder, groups } = query;
   return new PipelineBuilder()
     .match({

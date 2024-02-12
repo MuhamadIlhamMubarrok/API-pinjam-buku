@@ -3,7 +3,7 @@ import { IsString, IsDefined, IsOptional } from 'class-validator';
 import { Types } from 'mongoose';
 import { parseAndAssign } from '../utils/test.utils';
 
-export class GetRolesDTO {
+export class GetGroupDTO {
   @IsOptional()
   search?: string;
 
@@ -27,8 +27,8 @@ export class GetRolesDTO {
 }
 
 @Injectable()
-export class GetRolesDTOPipe implements PipeTransform {
-  transform(query: GetRolesDTO): GetRolesDTO {
+export class GetGroupDTOPipe implements PipeTransform {
+  transform(query: GetGroupDTO): GetGroupDTO {
     const { limit, page, sortOrder, groups, isActive } = query;
 
     parseAndAssign(query, 'limit', limit, 'intParse');

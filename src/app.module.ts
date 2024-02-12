@@ -1,8 +1,8 @@
 import { Module, MiddlewareConsumer } from '@nestjs/common';
 import { AuthMiddleware } from 'utils';
-import { RoleModule } from './modules/role.module';
+import { GroupModule } from './modules/group.module';
 @Module({
-  imports: [RoleModule],
+  imports: [GroupModule],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

@@ -1,9 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-<<<<<<< HEAD
-import { GroupService } from '../services/role.service';
-import { MongooseConfigService } from '../db/db.config';
-=======
->>>>>>> parent of f638c27 (feat: add request scoped service with connection)
 import { getModelToken } from '@nestjs/mongoose';
 import { GroupService } from '../services/group.service';
 import { CreateGroupDTO } from '../dto/group.dto';
