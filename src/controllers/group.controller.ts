@@ -19,7 +19,7 @@ export class GroupController {
   constructor(private groupService: GroupService) {}
 
   @Get('/')
-  @ApiQuery({ name: 'Query params', type: GetGroupsDTO })
+  @ApiQuery({ name: 'Query params', type: GetGroupDTO })
   @ApiQuery({
     name: 'page',
     type: Number,
@@ -52,7 +52,7 @@ export class GroupController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Successfully get device name',
+    description: 'Successfully get groups',
     schema: {
       type: 'object',
       properties: {
@@ -139,7 +139,6 @@ export class GroupController {
     @Query(GetGroupDTOPipe) query: GetGroupDTO,
   ) {
     try {
-      console.log(req.user);
       const list = await this.groupService.aggregateGroups(
         getGroupPipeline(query),
       );

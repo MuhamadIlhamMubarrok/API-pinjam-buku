@@ -1,7 +1,6 @@
 import { Injectable, PipeTransform } from '@nestjs/common';
 import { IsString, IsDefined, IsOptional } from 'class-validator';
 import { Types } from 'mongoose';
-import { parseAndAssign } from '../utils/test.utils';
 
 export class GetGroupDTO {
   @IsOptional()
@@ -31,8 +30,13 @@ export class GetGroupDTOPipe implements PipeTransform {
   transform(query: GetGroupDTO): GetGroupDTO {
     const { limit, page, sortOrder, groups, isActive } = query;
 
-    parseAndAssign(query, 'limit', limit, 'intParse');
-    parseAndAssign(query, 'page', page, 'intParse');
+    if (limit) {
+      query.limit = parseInt(limit as string);
+    }
+
+    if (page) {
+      query.page = parseInt(page as string);
+    }
 
     if (sortOrder) {
       query.sortOrder = parseInt(sortOrder as string);

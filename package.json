@@ -58,6 +58,17 @@
     "typescript": "^5.1.3"
   },
   "jest": {
+    "coveragePathIgnorePatterns": [
+      ".module.ts",
+      "main.ts",
+      "db.config.ts",
+      ".dto.ts",
+      ".pipeline.ts",
+      ".filter.ts",
+      ".model.ts",
+      ".util.ts",
+      ".middleware.ts"
+    ],
     "moduleFileExtensions": [
       "js",
       "json",

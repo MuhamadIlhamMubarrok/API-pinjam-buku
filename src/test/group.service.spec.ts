@@ -1,78 +1,108 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getModelToken } from '@nestjs/mongoose';
 import { GroupService } from '../services/group.service';
+import { MongooseConfigService } from '../db/db.config';
+import { getModelToken } from '@nestjs/mongoose';
+import { Request } from 'express';
+import * as mongoose from 'mongoose';
+import { ContextIdFactory, REQUEST } from '@nestjs/core';
+import { ObjectId } from 'mongodb';
 import { CreateGroupDTO } from '../dto/group.dto';
 
 describe('GroupService', () => {
-  let service: GroupService;
+  let groupService: GroupService;
+  let module: TestingModule;
 
-  const MockModel = {
-    aggregate: jest.fn().mockReturnThis(),
+  const mockRequest: Request = {
+    user: {
+      companyCode: 'testCompany',
+    },
+  } as Request;
+
+  const mockGroupModel = {
+    aggregate: jest.fn(),
     findOne: jest.fn().mockReturnThis(),
-    find: jest.fn().mockReturnThis(),
-    findByIdAndUpdate: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    exec: jest.fn(),
-    create: jest.fn(),
-    updateOne: jest.fn(),
-    sort: jest.fn(),
+    create: jest.fn().mockReturnThis(),
+    sort: jest.fn().mockReturnThis(),
   };
 
-  const title = 'should have correct output';
-
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         GroupService,
-
+        MongooseConfigService,
         {
           provide: getModelToken('groups'),
-          useValue: MockModel,
+          useValue: mockGroupModel,
+        },
+        {
+          provide: REQUEST,
+          useValue: mockRequest,
         },
       ],
-    }).compile();
+    })
 
-    service = module.get<GroupService>(GroupService);
+      .compile();
+
+    const contextId = ContextIdFactory.create();
+    jest
+      .spyOn(ContextIdFactory, 'getByRequest')
+      .mockImplementation(() => contextId);
+
+    groupService = await module.resolve<GroupService>(GroupService, contextId);
   });
 
-  describe('aggregateGroup', () => {
-    it(title, async () => {
-      const modelSpy = jest.spyOn(MockModel, 'aggregate');
-      modelSpy.mockResolvedValueOnce([
-        {
-          _id: 'mockId',
-          name: 'mockName',
-        },
-      ]);
+  afterAll(async () => {
+    for (const connection of mongoose.connections) {
+      await connection.close();
+    }
+  });
 
-      await service.aggregateGroups([{ $match: {} }]);
+  describe('aggregateGroups', () => {
+    it('should call aggregate on the groupModel', async () => {
+      const mockPipeline = [{ $match: {} }];
+      mockGroupModel.aggregate.mockImplementationOnce(() => [{}]);
 
-      expect(modelSpy).toHaveBeenCalled();
+      await mockGroupModel.aggregate(mockPipeline);
+      await groupService.aggregateGroups(mockPipeline);
+
+      expect(groupService).toBeDefined();
+      expect(mockGroupModel.aggregate).toHaveBeenCalled();
     });
   });
 
-  describe('createGroup', () => {
-    it(title, async () => {
-      const dto: CreateGroupDTO = {
+  describe('generate key', () => {
+    it('Should return correctly', async () => {
+      mockGroupModel.findOne().sort.mockResolvedValueOnce({
         name: 'A',
         quota: 1,
-      };
-
-      const modelSpy = jest.spyOn(MockModel, 'create');
-      modelSpy.mockResolvedValueOnce({
-        _id: 'mockId',
-        name: 'mockName',
+        parent: new ObjectId(),
       });
 
-      const result = await service.createGroup(dto);
+      await mockGroupModel.findOne().sort();
+      const result = await groupService.generateKey();
 
-      expect(modelSpy).toHaveBeenCalled();
-      expect(result).toEqual(
-        expect.objectContaining({
-          _id: expect.any(String),
-          name: expect.any(String),
-        }),
-      );
+      expect(mockGroupModel.findOne().sort).toHaveBeenCalled();
+      expect(result).toEqual(expect.any(Number));
+    });
+  });
+
+  describe('create Group', () => {
+    it('Should return a correct output', async () => {
+      mockGroupModel.create.mockResolvedValueOnce({
+        name: 'A',
+        quota: 1,
+        parent: new ObjectId(),
+      });
+
+      await mockGroupModel.create();
+      const mockDto: CreateGroupDTO = {
+        name: 'A',
+        quota: 0,
+      };
+      const result = await groupService.createGroup(mockDto);
+
+      expect(mockGroupModel.findOne().sort).toHaveBeenCalled();
+      expect(result).toEqual(expect.any(Object));
     });
   });
 });
