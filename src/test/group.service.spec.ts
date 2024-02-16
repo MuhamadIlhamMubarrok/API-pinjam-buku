@@ -48,7 +48,7 @@ describe('GroupService', () => {
 
     groupService = await module.resolve<GroupService>(GroupService, contextId);
 
-    groupService.setConnection();
+    await groupService.setConnection();
   });
 
   afterAll(async () => {

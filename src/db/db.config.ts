@@ -5,7 +5,7 @@ import { Connection, Schema, createConnection } from 'mongoose';
 export class MongooseConfigService {
   private readonly connections: Map<string, Connection> = new Map();
 
-  getConnection(dbUri: string): Connection {
+  async getConnection(dbUri: string): Promise<Connection> {
     if (!this.connections.has(dbUri)) {
       const connection = createConnection(dbUri);
       this.connections.set(dbUri, connection);
@@ -13,8 +13,8 @@ export class MongooseConfigService {
     return this.connections.get(dbUri);
   }
 
-  getModel(dbUri: string, name: string, schema: Schema) {
-    const connection = this.getConnection(dbUri);
+  async getModel(dbUri: string, name: string, schema: Schema) {
+    const connection = await this.getConnection(dbUri);
     return connection.model(name, schema);
   }
 
