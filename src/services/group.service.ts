@@ -16,11 +16,16 @@ export class GroupService {
     @Inject(REQUEST)
     private req: Request,
   ) {
-    const connection = this.connectionManager.getConnection(
-      `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
-    );
-    this.groupModel = connection.model('groups', GroupSchema);
+    this.setConnection();
   }
+
+  public setConnection = async () => {
+    this.groupModel = (await this.connectionManager.getModel(
+      `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
+      'groups',
+      GroupSchema,
+    )) as Model<IGroup>;
+  };
 
   async aggregateGroups(pipeline: PipelineStage[]): Promise<any[]> {
     return await this.groupModel.aggregate(pipeline);

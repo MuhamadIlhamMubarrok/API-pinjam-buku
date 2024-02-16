@@ -39,9 +39,7 @@ describe('GroupService', () => {
           useValue: mockRequest,
         },
       ],
-    })
-
-      .compile();
+    }).compile();
 
     const contextId = ContextIdFactory.create();
     jest
@@ -49,6 +47,8 @@ describe('GroupService', () => {
       .mockImplementation(() => contextId);
 
     groupService = await module.resolve<GroupService>(GroupService, contextId);
+
+    groupService.setConnection();
   });
 
   afterAll(async () => {
