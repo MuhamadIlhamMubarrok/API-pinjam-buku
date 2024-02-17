@@ -7,6 +7,7 @@ import getGroupPipeline from '../pipeline/getGroupList.pipeline';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiOperation,
   ApiQuery,
   ApiResponse,
   ApiTags,
@@ -19,6 +20,9 @@ export class GroupController {
   constructor(private groupService: GroupService) {}
 
   @Get('/')
+  @ApiOperation({
+    summary: 'Get Group Data',
+  })
   @ApiQuery({ name: 'Query params', type: GetGroupDTO })
   @ApiQuery({
     name: 'page',
@@ -159,6 +163,9 @@ export class GroupController {
   }
 
   @Post('/')
+  @ApiOperation({
+    summary: 'Create Group Data',
+  })
   @ApiBody({
     description: 'Request body',
     schema: {
