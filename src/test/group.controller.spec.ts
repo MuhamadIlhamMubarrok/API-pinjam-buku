@@ -3,7 +3,7 @@ import { GroupController } from '../controllers/group.controller';
 import { GroupService } from '../services/group.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { MongooseConfigService } from '../db/db.config';
-import { ContextIdFactory, REQUEST } from '@nestjs/core';
+import { REQUEST } from '@nestjs/core';
 import * as mongoose from 'mongoose';
 import { CreateGroupDTO, GetGroupDTO } from '../dto/group.dto';
 import { Request, Response } from 'express';
@@ -60,11 +60,6 @@ describe('Group Controller', () => {
     }).compile();
 
     controller = module.get<GroupController>(GroupController);
-
-    const contextId = ContextIdFactory.create();
-    jest
-      .spyOn(ContextIdFactory, 'getByRequest')
-      .mockImplementation(() => contextId);
   });
 
   afterAll(async () => {

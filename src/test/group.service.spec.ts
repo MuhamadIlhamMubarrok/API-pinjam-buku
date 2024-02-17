@@ -4,12 +4,15 @@ import { MongooseConfigService } from '../db/db.config';
 import { getModelToken } from '@nestjs/mongoose';
 import { Request } from 'express';
 import * as mongoose from 'mongoose';
+import { Model } from 'mongoose';
 import { ContextIdFactory, REQUEST } from '@nestjs/core';
 import { ObjectId } from 'mongodb';
 import { CreateGroupDTO } from '../dto/group.dto';
+import { IGroup } from 'schemas';
 
 describe('GroupService', () => {
   let groupService: GroupService;
+  let mongooseConfigService: MongooseConfigService;
   let module: TestingModule;
 
   const mockRequest: Request = {
@@ -47,6 +50,13 @@ describe('GroupService', () => {
       .mockImplementation(() => contextId);
 
     groupService = await module.resolve<GroupService>(GroupService, contextId);
+
+    mongooseConfigService = module.get<MongooseConfigService>(
+      MongooseConfigService,
+    );
+    jest
+      .spyOn(mongooseConfigService, 'getModel')
+      .mockResolvedValueOnce(mockGroupModel as unknown as Model<IGroup>);
 
     await groupService.setConnection();
   });
