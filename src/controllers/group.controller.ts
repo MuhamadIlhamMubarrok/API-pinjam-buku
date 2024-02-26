@@ -1,7 +1,13 @@
 import { Controller, Get, Post, Body, Res, Query, Req } from '@nestjs/common';
 import { GroupService } from '../services/group.service';
 import { Created, errorResponse, Success, sendResponse } from 'utils';
-import { CreateGroupDTO, GetGroupDTO, GetGroupDTOPipe } from '../dto/group.dto';
+import {
+  CreateGroupDTO,
+  GetGroupDTO,
+  GetGroupDTOPipe,
+  GetGroupOptionsDTO,
+  GetGroupOptionsDTOPipe,
+} from '../dto/group.dto';
 import { Request, Response } from 'express';
 import getGroupPipeline from '../pipeline/getGroupList.pipeline';
 import {
@@ -12,6 +18,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import getGroupOptionsPipeline from 'src/pipeline/getGroupOptions.pipeline';
 
 @ApiTags('Group')
 @ApiBearerAuth('access-token')
@@ -135,7 +142,6 @@ export class GroupController {
       },
     },
   })
-
   //Get role list for table
   async getGroupList(
     @Req() req: Request,
@@ -155,6 +161,57 @@ export class GroupController {
       await sendResponse(
         res,
         new Success('Successfully get group list', result),
+      );
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+
+  @Get('/options')
+  @ApiOperation({
+    summary: 'Get Group Options',
+  })
+  @ApiQuery({ name: 'Query params', type: GetGroupDTO })
+  @ApiQuery({
+    name: 'search',
+    type: String,
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully get groups options',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'integer', example: 200 },
+        description: {
+          type: 'string',
+          example: 'Successfully get device name',
+        },
+      },
+    },
+  })
+  //Get group options
+  async getGroupOptions(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query(GetGroupOptionsDTOPipe) query: GetGroupOptionsDTO,
+  ) {
+    try {
+      const optionsPipeline = getGroupOptionsPipeline(query);
+
+      const optionsList =
+        await this.groupService.aggregateGroups(optionsPipeline);
+
+      let result = {};
+      if (optionsList.length > 0) {
+        result = optionsList[0];
+      }
+
+      await sendResponse(
+        res,
+        new Success('Successfully get group options', result),
       );
     } catch (error) {
       console.error(error);

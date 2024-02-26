@@ -24,6 +24,31 @@ export class GetGroupDTO {
   @IsOptional()
   sortOrder?: string | number;
 }
+export class GetGroupOptionsDTO extends GetGroupDTO {
+  @IsOptional()
+  groupOptions?: string | boolean;
+}
+
+export class GetGroupOptionsDTOPipe implements PipeTransform {
+  transform(query: GetGroupOptionsDTO): GetGroupDTO {
+    const { groups, groupOptions } = query;
+
+    if (groupOptions) {
+      if (groupOptions == 'true') {
+        query.groupOptions = true;
+      } else if (groupOptions == 'false') {
+        query.groupOptions = false;
+      } else {
+        query.groupOptions = undefined;
+      }
+    }
+    if (groups) {
+      query.groups = JSON.parse(groups as string);
+    }
+
+    return query;
+  }
+}
 
 @Injectable()
 export class GetGroupDTOPipe implements PipeTransform {

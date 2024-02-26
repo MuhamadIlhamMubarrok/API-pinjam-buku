@@ -39,12 +39,7 @@ const getGroupListPipeline = (query: GetGroupDTO) => {
     })
     .facet({
       total: [{ $count: 'total' }],
-      brandOptions: new FacetPipelineBuilder()
-        .unwind('$brands')
-        .group({ _id: { label: '$brands.name', value: '$brands.key' } })
-        .match({ '_id.label': { $nin: [null, ''] } })
-        .sort({ '_id.label': 1 })
-        .build(),
+
       groups: new FacetPipelineBuilder()
         .sort(
           (sortBy && sortOrder && ({ [sortBy]: sortOrder } as any)) || {
@@ -60,8 +55,6 @@ const getGroupListPipeline = (query: GetGroupDTO) => {
     .unwind('$total')
     .set({
       total: '$total.total',
-      modelOptions: '$modelOptions._id',
-      brandOptions: '$brandOptions._id',
     })
     .build();
 };
