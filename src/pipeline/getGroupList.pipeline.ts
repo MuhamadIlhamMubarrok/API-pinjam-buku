@@ -53,7 +53,7 @@ const getGroupListPipeline = (query: GetGroupDTO) => {
     })
     .unwind('$totalRecords')
     .set({
-      total: '$totalRecords.totalRecords',
+      totalRecords: '$totalRecords.totalRecords',
     })
     .build();
 };
