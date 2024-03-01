@@ -38,9 +38,8 @@ const getGroupListPipeline = (query: GetGroupDTO) => {
       $or: [{ name: generateSearchCondition(search) }],
     })
     .facet({
-      total: [{ $count: 'total' }],
-
-      groups: new FacetPipelineBuilder()
+      totalRecords: [{ $count: 'totalRecords' }],
+      data: new FacetPipelineBuilder()
         .sort(
           (sortBy && sortOrder && ({ [sortBy]: sortOrder } as any)) || {
             updatedAt: -1,
@@ -52,9 +51,9 @@ const getGroupListPipeline = (query: GetGroupDTO) => {
         .limit(limit)
         .build(),
     })
-    .unwind('$total')
+    .unwind('$totalRecords')
     .set({
-      total: '$total.total',
+      total: '$totalRecords.totalRecords',
     })
     .build();
 };
