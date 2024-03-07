@@ -153,7 +153,7 @@ export class GroupController {
         getGroupPipeline(query),
       );
 
-      let result = { totalRecords: 0, groups: [] };
+      let result = { total: 0, groups: [] };
       if (list.length > 0) {
         result = list[0];
       }
