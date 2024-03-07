@@ -3,7 +3,7 @@ import { Model, FilterQuery } from 'mongoose';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import { MongooseConfigService } from '../db/db.config';
-import { UsersSchema } from '../models/user.model';
+import { UserSchema } from '../models/user.model';
 import { IUser } from 'schemas';
 
 @Injectable({ scope: Scope.REQUEST })
@@ -21,7 +21,7 @@ export class UserService {
     this.userModel = (await this.connectionManager.getModel(
       `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
       'user',
-      UsersSchema,
+      UserSchema,
     )) as Model<IUser>;
   };
 
