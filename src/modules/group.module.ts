@@ -4,6 +4,8 @@ import { GroupService } from '../services/group.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GroupSchema } from '../models/group.model';
 import { MongooseConfigService } from 'src/db/db.config';
+import { TransactionController } from 'src/controllers/transaction.controller';
+import { TransactionService } from 'src/services/transaction.service';
 
 @Module({
   imports: [
@@ -15,7 +17,7 @@ import { MongooseConfigService } from 'src/db/db.config';
       'companyConnection',
     ),
   ],
-  controllers: [GroupController],
-  providers: [GroupService, MongooseConfigService],
+  controllers: [GroupController, TransactionController],
+  providers: [GroupService, MongooseConfigService, TransactionService],
 })
 export class GroupModule {}
