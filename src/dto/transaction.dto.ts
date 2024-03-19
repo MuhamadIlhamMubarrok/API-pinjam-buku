@@ -1,4 +1,4 @@
-import { IsMongoId, IsNotEmpty, IsString } from 'class-validator';
+import { IsArray, IsMongoId, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateTransactionAttributeDTO {
   @IsNotEmpty()
@@ -10,6 +10,20 @@ export class CreateTransactionAttributeDTO {
 
   @IsNotEmpty()
   key: number;
+}
+
+export class ArrayOfIdDTO {
+  @IsArray()
+  id: string[];
+}
+
+export class UpdateApprovalStatusDTO {
+  @IsNotEmpty()
+  isApproved: boolean;
+
+  @IsNotEmpty()
+  @IsMongoId()
+  id: string;
 }
 
 export class CreateTransactionUserDTO {
