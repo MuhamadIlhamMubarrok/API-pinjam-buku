@@ -32,7 +32,8 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "schemas": "github:be-fixedassetv2/tsv2-schemas#main",
-    "utils": "github:be-fixedassetv2/tsv2-utils#main"
+    "utils": "github:be-fixedassetv2/tsv2-utils#main",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

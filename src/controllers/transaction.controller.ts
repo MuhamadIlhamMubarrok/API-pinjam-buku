@@ -14,6 +14,7 @@ import { Request, Response } from 'express';
 import {
   ArrayOfIdDTO,
   CreateTransactionDTO,
+  ReportRequestDTO,
   UpdateApprovalStatusDTO,
 } from 'src/dto/transaction.dto';
 import { getApprovalHistoryListPipeline } from 'src/pipeline/getApprovalHistoryList.pipeline';
@@ -21,6 +22,66 @@ import { getApprovalHistoryListPipeline } from 'src/pipeline/getApprovalHistoryL
 @Controller('/v2/transaction')
 export class TransactionController {
   constructor(private transactionService: TransactionService) {}
+
+  @Get('request/:id/transaction-log')
+  async getTransactionLogList(@Res() res: Response, @Param('id') id: string) {
+    try {
+      const result = await this.transactionService.getTransactionLogList(id);
+      await sendResponse(
+        res,
+        new Success('report updated successfully', result),
+      );
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+
+  @Get('request/:id/mising')
+  async reportMissingRequest(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param('id') id: string,
+    @Body() body: ReportRequestDTO,
+  ) {
+    try {
+      const result = await this.transactionService.ReportRequest(
+        req.user.id,
+        id,
+        'Missing',
+        body.note,
+      );
+      await sendResponse(
+        res,
+        new Success('report updated successfully', result),
+      );
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+
+  @Get('request/:id/damaged')
+  async reportDamagedRequest(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param('id') id: string,
+    @Body() body: ReportRequestDTO,
+  ) {
+    try {
+      await this.transactionService.ReportRequest(
+        req.user.id,
+        id,
+        'Damaged',
+        body.note,
+      );
+
+      await sendResponse(res, new Success('report updated successfully'));
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
 
   @Get(':id/approval-history')
   async getApprovalHistory(@Res() res: Response, @Param('id') id: string) {
@@ -45,18 +106,6 @@ export class TransactionController {
   }
 
   @Post('/')
-  /*
-    body = [
-            {
-                "asset":"65ea6fc61f39f83ef63583ed",
-                "user":"65f1161330abfb9184993b90"
-            },
-            {
-                "asset":"65ea7d29f5cd331b5beed2b1",
-                "user":"6454c4253dd1017f28689572"
-            }
-        ]
-*/
   async createTransaction(
     @Res() res: Response,
     @Body() body: CreateTransactionDTO[],
@@ -77,9 +126,16 @@ export class TransactionController {
   }
 
   @Put('request/cancel')
-  async cancelRequest(@Res() res: Response, @Body() body: ArrayOfIdDTO) {
+  async cancelRequest(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body() body: ArrayOfIdDTO,
+  ) {
     try {
-      const result = await this.transactionService.cancelRequest(body.id);
+      const result = await this.transactionService.cancelRequest(
+        body.id,
+        req.user.id,
+      );
 
       await sendResponse(
         res,
@@ -92,9 +148,16 @@ export class TransactionController {
   }
 
   @Put(':id/cancel')
-  async cancelTransaction(@Res() res: Response, @Param('id') id: string) {
+  async cancelTransaction(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param('id') id: string,
+  ) {
     try {
-      const result = await this.transactionService.cancelTransaction(id);
+      const result = await this.transactionService.cancelTransaction(
+        id,
+        req.user.id,
+      );
 
       await sendResponse(
         res,
@@ -107,9 +170,16 @@ export class TransactionController {
   }
 
   @Put(':id/handover')
-  async handoverTransaction(@Res() res: Response, @Param('id') id: string) {
+  async handoverTransaction(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param('id') id: string,
+  ) {
     try {
-      const result = await this.transactionService.handoverTransaction(id);
+      const result = await this.transactionService.handoverTransaction(
+        id,
+        req.user.id,
+      );
 
       await sendResponse(
         res,
@@ -121,14 +191,14 @@ export class TransactionController {
     }
   }
 
-  @Put('approval-status')
-  async updateApprovalStatus(
+  @Put('approve')
+  async approveRequest(
     @Req() req: Request,
     @Res() res: Response,
     @Body() body: UpdateApprovalStatusDTO,
   ) {
     try {
-      const result = await this.transactionService.updateApprovalStatus(
+      const result = await this.transactionService.approveRequest(
         req.user.id,
         body,
       );

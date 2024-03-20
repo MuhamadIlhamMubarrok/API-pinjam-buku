@@ -7,36 +7,6 @@ export const getApprovalHistoryListPipeline = (transaction: string) => {
     .match({
       transaction: transactionId,
     })
-    .lookup({
-      from: 'users',
-      as: 'user',
-      localField: 'user',
-      foreignField: '_id',
-      pipeline: [
-        {
-          $project: {
-            key: 1,
-            firstName: 1,
-            lastName: 1,
-            fullName: {
-              $concat: [
-                '$firstName',
-                {
-                  $cond: {
-                    if: { $eq: ['$lastName', null] },
-                    then: '',
-                    else: ' ',
-                  },
-                },
-                {
-                  $ifNull: ['$lastName', ''],
-                },
-              ],
-            },
-          },
-        },
-      ],
-    })
     .addFields({
       user: '$user.fullName',
     })
