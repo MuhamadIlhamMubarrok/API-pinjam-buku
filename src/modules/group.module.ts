@@ -6,6 +6,7 @@ import { GroupSchema } from '../models/group.model';
 import { MongooseConfigService } from 'src/db/db.config';
 import { TransactionController } from 'src/controllers/transaction.controller';
 import { TransactionService } from 'src/services/transaction.service';
+import { NotificationWebsocketService } from 'src/services/notification.websocket.service';
 
 @Module({
   imports: [
@@ -18,6 +19,11 @@ import { TransactionService } from 'src/services/transaction.service';
     ),
   ],
   controllers: [GroupController, TransactionController],
-  providers: [GroupService, MongooseConfigService, TransactionService],
+  providers: [
+    GroupService,
+    MongooseConfigService,
+    TransactionService,
+    NotificationWebsocketService,
+  ],
 })
 export class GroupModule {}

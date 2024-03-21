@@ -12,6 +12,7 @@ import {
 import { MongooseConfigService } from '../db/db.config';
 import { TransactionSchema, RequestSchema } from '../models/transaction.model';
 import {
+  CreateNotificationDTO,
   CreateTransactionDTO,
   UpdateApprovalStatusDTO,
 } from '../dto/transaction.dto';
@@ -19,6 +20,7 @@ import { groupBy, getCurrentDate, NotFound, Forbidden } from 'utils';
 import { UserTransactionRoleSchema } from '../models/userTransactionRole.model';
 import { AssignmentApprovalSchema } from 'src/models/assignmentApproval.model';
 import { TransactionLogSchema } from 'src/models/transactionLog.model';
+import { NotificationWebsocketService } from './notification.websocket.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class TransactionService {
@@ -32,6 +34,7 @@ export class TransactionService {
     private connectionManager: MongooseConfigService,
     @Inject(REQUEST)
     private req: Request,
+    private readonly notificationWsClient: NotificationWebsocketService,
   ) {
     this.setConnection();
   }
@@ -136,13 +139,15 @@ export class TransactionService {
             userId: transaction.manager._id,
             userFullName: transaction.manager.fullName,
           });
-          await this.createApprovals(transaction, request);
+          await this.createApproval(transaction, request);
         }
+
+        await this.updateTransactionStatus(transaction._id);
       }
     }
   }
 
-  async createApprovals(
+  async createApproval(
     transaction: IAssignmentTransaction,
     request: IAssignmentRequest,
   ) {
@@ -155,16 +160,56 @@ export class TransactionService {
       await this.requestModel.findByIdAndUpdate(request._id, {
         status: 'Waiting for Handover',
       });
-      await this.transactionModel.findByIdAndUpdate(transaction._id, {
-        status: 'Waiting for Handover',
-      });
+
+      const managers: IUserTransactionRole[] = await this.getManagersPerRole(
+        transaction.group._id,
+        'borrowingRole',
+      );
+
+      // this.notificationWsClient.sendNotification('00000', [
+      //   {
+      //     user: transaction.assignedTo._id.toString(),
+      //     title: 'Waiting for Handover',
+      //     detail: 'Waiting for Handover',
+      //     isReadOnly: true,
+      //     isManager: true,
+      //     severity: 'info ',
+      //   },
+      // ]);
+
+      // let pendingNotification: CreateNotificationDTO[];
+      // for (const manager of managers) {
+      //   pendingNotification.push({
+      //     user: manager.user._id.toString(),
+      //     title: 'Waiting for Handover',
+      //     detail: 'Waiting for Handover',
+      //     isReadOnly: true,
+      //     isManager: true,
+      //     severity: 'info ',
+      //   });
+      // }
+      // this.notificationWsClient.sendNotification("00000", pendingNotification);
     } else {
+      const newAssignmentApprovalData = [];
       for (const approver of approvers) {
-        let status = 'Need Approval';
-        if (approver.approvalLevel > 1) {
+        let status;
+        if (approver.approvalLevel == 1) {
+          status = 'Need Approval';
+
+          // this.notificationWsClient.sendNotification('00000', [
+          //   {
+          //     user: approver.user._id.toString(),
+          //     title: 'Waiting for Approval',
+          //     detail: 'Waiting for Approval',
+          //     isReadOnly: true,
+          //     isManager: false,
+          //     severity: 'info ',
+          //   },
+          // ]);
+        } else {
           status = 'Pending';
         }
-        await this.assignmentApprovalModel.create({
+        newAssignmentApprovalData.push({
           user: approver.user._id,
           level: approver.approvalLevel,
           request: request._id,
@@ -179,15 +224,13 @@ export class TransactionService {
           createdAt: new Date(),
         });
       }
+      await this.assignmentApprovalModel.insertMany(newAssignmentApprovalData);
     }
   }
 
   async cancelTransaction(id: string, userId: string) {
     const transactionData = await this.transactionModel.findById(id);
-    const isManager = await this.isManager(
-      transactionData.group._id.toString(),
-      userId,
-    );
+    const isManager = await this.isManager(transactionData.group._id, userId);
 
     if (!isManager) {
       throw new Forbidden('user does not have access');
@@ -218,19 +261,26 @@ export class TransactionService {
       },
     );
 
-    const relatedTransactionLogs = await this.transactionLogModel.find({
-      transactionId: transactionResult.transactionId,
+    const relatedRequestDatas = await this.requestModel.find({
+      transaction: new Types.ObjectId(id),
+      status: 'Cancelled',
     });
 
-    for (const transactionLog of relatedTransactionLogs) {
-      delete transactionLog['_id'];
-      delete transactionLog['createdAt'];
-      transactionLog.action = 'Cancelled';
-      transactionLog.userId = new Types.ObjectId(userId);
-      transactionLog.userFullName = isManager.user.fullName;
-
-      await this.transactionLogModel.create(transactionLog);
+    const newTransactionLogData = [];
+    for (const requestData of relatedRequestDatas) {
+      newTransactionLogData.push({
+        type: 'Assignment',
+        transactionId: transactionData.transactionId,
+        transaction: requestData.transaction,
+        assetId: requestData.asset,
+        assetName: requestData.assetName.nameWithSequence,
+        action: 'Cancelled',
+        userId: isManager.user._id,
+        userFullName: isManager.user.fullName,
+      });
     }
+
+    await this.transactionLogModel.insertMany(newTransactionLogData);
 
     return transactionResult;
   }
@@ -245,7 +295,7 @@ export class TransactionService {
       );
 
       const isManager: IUserTransactionRole = await this.isManager(
-        transactionData.group._id.toString(),
+        transactionData.group._id,
         userId,
       );
 
@@ -256,11 +306,14 @@ export class TransactionService {
       const requestResult = await this.requestModel.findByIdAndUpdate(id, {
         status: 'Cancelled',
       });
+
+      await this.updateTransactionStatus(requestResult.transaction);
+
       await this.assignmentApprovalModel.updateMany(
         {
           request: id,
         },
-        { status: 'Finished Approval' },
+        { status: 'Cancelled' },
       );
 
       await this.transactionLogModel.create({
@@ -279,31 +332,34 @@ export class TransactionService {
   }
 
   async handoverTransaction(transactionId: string, userId: string) {
-    const isNotWaitingForHandover = await this.requestModel.find({
-      transaction: new Types.ObjectId(transactionId),
-      status: { $ne: 'Waiting for Handover' },
-    });
-
-    if (isNotWaitingForHandover.length > 0) {
-      throw new Error(
-        "related request status has not fully 'Waiting for Handover'",
-      );
-    }
-
     const transactionData = await this.transactionModel.findById(transactionId);
 
     if (!transactionData.confirmationEmailConfirmed) {
       throw new Error('email has not confirmed');
     }
 
+    if (transactionData.status != 'Waiting for Handover') {
+      throw new Error('transaction status is not "waiting for handover"');
+    }
+
     const isManager: IUserTransactionRole = await this.isManager(
-      transactionData.group._id.toString(),
+      transactionData.group._id,
       userId,
     );
 
     if (!isManager) {
       throw new Forbidden('user does not have access');
     }
+
+    await this.requestModel.updateMany(
+      {
+        transaction: new Types.ObjectId(transactionId),
+        status: 'Waiting for Handover',
+      },
+      {
+        status: 'Assigned',
+      },
+    );
 
     const transactionResult = await this.transactionModel.findByIdAndUpdate(
       transactionId,
@@ -314,27 +370,25 @@ export class TransactionService {
 
     const relatedRequestData = await this.requestModel.find({
       transaction: new Types.ObjectId(transactionId),
+      status: 'Assigned',
     });
 
-    for (const requestData of relatedRequestData) {
-      const updatedRequestData = await this.requestModel.findByIdAndUpdate(
-        requestData._id,
-        {
-          status: 'Assigned',
-        },
-      );
+    const newTransactionLogData = [];
 
-      await this.transactionLogModel.create({
+    for (const requestData of relatedRequestData) {
+      newTransactionLogData.push({
         type: 'Assignment',
         transactionId: transactionResult.transactionId,
-        transaction: updatedRequestData._id,
-        assetId: updatedRequestData.asset,
-        assetName: updatedRequestData.assetName.nameWithSequence,
+        transaction: requestData._id,
+        assetId: requestData.asset,
+        assetName: requestData.assetName.nameWithSequence,
         action: 'Handed over',
         userId: userId,
         userFullName: isManager.user.fullName,
       });
     }
+
+    await this.transactionLogModel.insertMany(newTransactionLogData);
 
     return transactionResult;
   }
@@ -413,25 +467,45 @@ export class TransactionService {
         },
       );
     }
-    const updateNextLevelApproval =
-      await this.assignmentApprovalModel.updateMany(
-        {
-          request: updatedData.request,
-          level: updatedData.level + 1,
-        },
-        {
-          status: 'Need Approval',
-        },
-      );
+    await this.assignmentApprovalModel.updateMany(
+      {
+        request: updatedData.request,
+        level: updatedData.level + 1,
+      },
+      {
+        status: 'Need Approval',
+      },
+    );
+
+    const nextLevelApprovalData = await this.assignmentApprovalModel.find({
+      request: updatedData.request,
+      level: updatedData.level + 1,
+      status: 'Need Approval',
+    });
+
+    // let pendingNotification: CreateNotificationDTO[];
+    // for (const approvalData of nextLevelApprovalData) {
+    //   pendingNotification.push({
+    //     user: approvalData.user._id.toString(),
+    //     title: 'Waiting for Approval',
+    //     detail: 'Waiting for Approval',
+    //     isReadOnly: true,
+    //     isManager: false,
+    //     severity: 'info ',
+    //   });
+    // }
+    // this.notificationWsClient.sendNotification('00000', pendingNotification);
 
     // check if there is there is next level approvals
-    if (updateNextLevelApproval.modifiedCount != 0) {
+    if (nextLevelApprovalData.length > 0) {
       return;
     }
 
     await this.requestModel.findByIdAndUpdate(updatedData.request, {
       status: 'Approved',
     });
+
+    await this.updateTransactionStatus(updatedData.transaction);
   }
 
   async rejectedStatusChainingEffect(updatedData: IAssignmentApproval) {
@@ -458,16 +532,13 @@ export class TransactionService {
     await this.requestModel.findByIdAndUpdate(updatedData.request, {
       status: 'Rejected',
     });
+
+    await this.updateTransactionStatus(updatedData.transaction);
   }
 
-  async ReportRequest(
-    userId: string,
-    requestId: string,
-    report: string,
-    note?: string,
-  ) {
+  async reportMissingRequest(userId: string, requestId: string, note?: string) {
     let userFullName;
-    let newStatus = 'Report ' + report;
+    let newStatus = 'Report Missing';
 
     const requestData: IAssignmentRequest =
       await this.requestModel.findById(requestId);
@@ -476,19 +547,15 @@ export class TransactionService {
       throw new NotFound('request data could not be found');
     }
 
-    const tranasctionData: IAssignmentTransaction =
+    const transactionData: IAssignmentTransaction =
       await this.transactionModel.findById(requestData.transaction);
 
-    let result: IAssignmentRequest;
-    if (userId == tranasctionData.assignedTo._id) {
-      userFullName = tranasctionData.assignedTo.fullName;
+    if (userId == transactionData.assignedTo._id) {
+      userFullName = transactionData.assignedTo.fullName;
       newStatus = newStatus + ' by User';
-      result = await this.requestModel.findByIdAndUpdate(requestId, {
-        status: newStatus,
-      });
     } else {
       const isManager: IUserTransactionRole = await this.isManager(
-        tranasctionData.group._id.toString(),
+        transactionData.group._id,
         userId,
       );
 
@@ -496,25 +563,107 @@ export class TransactionService {
         throw new Forbidden('user does not have access');
       }
       userFullName = isManager.user.fullName;
-
-      result = await this.requestModel.findByIdAndUpdate(requestId, {
-        status: newStatus,
-      });
     }
+    const result = await this.requestModel.findByIdAndUpdate(requestId, {
+      status: newStatus,
+    });
 
     await this.transactionLogModel.create({
       type: 'Assignment',
-      transactionId: tranasctionData.transactionId,
+      transactionId: transactionData.transactionId,
       transaction: requestData._id,
-      action: newStatus,
+      action: 'Report Missing',
       userId: new Types.ObjectId(userId),
       userFullName: userFullName,
     });
 
+    const trackingManagers: IUserTransactionRole[] =
+      await this.getManagersPerRole(transactionData.group._id, 'trackingRole');
+
+    // let pendingNotification: CreateNotificationDTO[];
+    // for (const manager of trackingManagers) {
+    //   pendingNotification.push({
+    //     user: manager.user._id.toString(),
+    //     title: newStatus,
+    //     detail: newStatus,
+    //     isReadOnly: true,
+    //     isManager: true,
+    //     severity: 'info ',
+    //   });
+    // }
+    // this.notificationWsClient.sendNotification('00000', pendingNotification);
+
     return result;
   }
 
-  async isManager(groupId: string, userId: string) {
+  async reportDamagedRequest(userId: string, requestId: string, note?: string) {
+    let userFullName;
+    let newStatus = 'Report Damaged';
+
+    const requestData: IAssignmentRequest =
+      await this.requestModel.findById(requestId);
+
+    if (!requestData) {
+      throw new NotFound('request data could not be found');
+    }
+
+    const transactionData: IAssignmentTransaction =
+      await this.transactionModel.findById(requestData.transaction);
+
+    if (userId == transactionData.assignedTo._id) {
+      userFullName = transactionData.assignedTo.fullName;
+      newStatus = newStatus + ' by User';
+    } else {
+      const isManager: IUserTransactionRole = await this.isManager(
+        transactionData.group._id,
+        userId,
+      );
+
+      if (!isManager) {
+        throw new Forbidden('user does not have access');
+      }
+      userFullName = isManager.user.fullName;
+    }
+
+    const result = await this.requestModel.findByIdAndUpdate(requestId, {
+      status: newStatus,
+    });
+
+    await this.transactionLogModel.create({
+      type: 'Assignment',
+      transactionId: transactionData.transactionId,
+      transaction: requestData._id,
+      action: 'Report Damaged',
+      userId: new Types.ObjectId(userId),
+      userFullName: userFullName,
+    });
+
+    const maintenanceManagers: IUserTransactionRole[] =
+      await this.getManagersPerRole(
+        transactionData.group._id,
+        'maintenanceRole',
+      );
+
+    // let pendingNotification: CreateNotificationDTO[];
+    // for (const manager of maintenanceManagers) {
+    //   pendingNotification.push({
+    //     user: manager.user._id.toString(),
+    //     title: newStatus,
+    //     detail: newStatus,
+    //     isReadOnly: true,
+    //     isManager: true,
+    //     severity: 'info ',
+    //   });
+    // }
+    // this.notificationWsClient.sendNotification('00000', pendingNotification);
+
+    return result;
+  }
+
+  async isManager(
+    groupId: string | Types.ObjectId,
+    userId: string | Types.ObjectId,
+  ) {
     return await this.userTransactionRoleModel.findOne({
       'group._id': new Types.ObjectId(groupId),
       transactionGroupAttribute: 'borrowingRole',
@@ -524,9 +673,72 @@ export class TransactionService {
     });
   }
 
-  async getTransactionLogList(requestId: string) {
+  async getManagersPerRole(groupId: string | Types.ObjectId, role: string) {
+    return await this.userTransactionRoleModel.find({
+      'group._id': new Types.ObjectId(groupId),
+      transactionGroupAttribute: role,
+      roleType: 'Manager',
+      isActive: true,
+    });
+  }
+
+  async getTransactionLogList(requestId: string | Types.ObjectId) {
     return await this.transactionLogModel.find({
       transaction: new Types.ObjectId(requestId),
     });
+  }
+
+  async updateTransactionStatus(transactionId: string | Types.ObjectId) {
+    const relatedRequests: IAssignmentRequest[] = await this.requestModel.find({
+      transaction: new Types.ObjectId(transactionId),
+    });
+
+    const rejectedRequest = relatedRequests.filter(
+      (request) => request.status == 'Rejected',
+    );
+    const cancelledRequest = relatedRequests.filter(
+      (request) => request.status == 'Cancelled',
+    );
+    const approvedRequest = relatedRequests.filter(
+      (request) => request.status == 'Approved',
+    );
+
+    const waitingForHandoverRequest = relatedRequests.filter(
+      (request) => request.status == 'Waiting for Handover',
+    );
+
+    const totalFinishedRequest =
+      rejectedRequest.length +
+      cancelledRequest.length +
+      approvedRequest.length +
+      waitingForHandoverRequest.length;
+
+    if (totalFinishedRequest < relatedRequests.length) {
+      return;
+    }
+
+    if (cancelledRequest.length == relatedRequests.length) {
+      this.transactionModel.findByIdAndUpdate(transactionId, {
+        status: 'Cancelled',
+      });
+    } else if (rejectedRequest.length == relatedRequests.length) {
+      this.transactionModel.findByIdAndUpdate(transactionId, {
+        status: 'Rejected',
+      });
+    } else {
+      this.requestModel.updateMany(
+        {
+          transaction: new Types.ObjectId(transactionId),
+          status: 'Approved',
+        },
+        {
+          status: 'Waiting for Handover',
+        },
+      );
+
+      this.transactionModel.findByIdAndUpdate(transactionId, {
+        status: 'Waiting for Handover',
+      });
+    }
   }
 }

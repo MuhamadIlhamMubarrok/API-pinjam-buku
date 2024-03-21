@@ -45,10 +45,9 @@ export class TransactionController {
     @Body() body: ReportRequestDTO,
   ) {
     try {
-      const result = await this.transactionService.ReportRequest(
+      const result = await this.transactionService.reportMissingRequest(
         req.user.id,
         id,
-        'Missing',
         body.note,
       );
       await sendResponse(
@@ -69,10 +68,9 @@ export class TransactionController {
     @Body() body: ReportRequestDTO,
   ) {
     try {
-      await this.transactionService.ReportRequest(
+      await this.transactionService.reportDamagedRequest(
         req.user.id,
         id,
-        'Damaged',
         body.note,
       );
 
