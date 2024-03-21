@@ -38,6 +38,9 @@ export class UpdateApprovalStatusDTO {
   @IsNotEmpty()
   @IsMongoId()
   id: string;
+
+  @IsOptional()
+  notes?: string;
 }
 
 export class CreateNotificationDTO {

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { GroupController } from '../controllers/group.controller';
 import { GroupService } from '../services/group.service';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -7,6 +7,7 @@ import { MongooseConfigService } from 'src/db/db.config';
 import { TransactionController } from 'src/controllers/transaction.controller';
 import { TransactionService } from 'src/services/transaction.service';
 import { NotificationWebsocketService } from 'src/services/notification.websocket.service';
+import { SetUploadMiddleware } from 'utils';
 
 @Module({
   imports: [
@@ -26,4 +27,13 @@ import { NotificationWebsocketService } from 'src/services/notification.websocke
     NotificationWebsocketService,
   ],
 })
-export class GroupModule {}
+export class GroupModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(new SetUploadMiddleware('damages', 'picture').use)
+      .forRoutes({
+        path: '/v2/transaction/request/:id/damaged',
+        method: RequestMethod.PUT,
+      });
+  }
+}
