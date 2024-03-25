@@ -13,6 +13,7 @@ import {
 import { MongooseConfigService } from '../db/db.config';
 import { TransactionSchema, RequestSchema } from '../models/transaction.model';
 import {
+  CreateNotificationDTO,
   CreateTransactionDTO,
   UpdateApprovalStatusDTO,
 } from '../dto/transaction.dto';
@@ -184,11 +185,15 @@ export class TransactionService {
 
           // pendingNotification.push({
           //   user: approver.user._id.toString(),
-          //   title: 'Waiting for Approval',
-          //   detail: 'Waiting for Approval',
+          //   title: 'Waiting for Assignment Approval',
+          //   detail: transaction.transactionId,
           //   isReadOnly: true,
           //   isManager: false,
-          //   severity: 'info ',
+          //   severity: 'warning',
+          //   data: {
+          //     transaction: request.transaction,
+          //     request: request._id,
+          //   },
           // });
         } else {
           status = 'Pending';
@@ -400,11 +405,14 @@ export class TransactionService {
 
     // pendingNotification.push({
     //   user: transactionResult.assignedTo._id.toString(),
-    //   title: 'Assigned',
-    //   detail: 'Assigned',
+    //   title: 'Asset has been Assigned',
+    //   detail: transactionResult.transactionId,
     //   isReadOnly: true,
     //   isManager: true,
     //   severity: 'info ',
+    //   data: {
+    //     transaction: transactionResult._id,
+    //   },
     // });
 
     // const managers: IUserTransactionRole[] = await this.getManagersPerRole(
@@ -414,14 +422,20 @@ export class TransactionService {
     // for (const manager of managers) {
     //   pendingNotification.push({
     //     user: manager.user._id.toString(),
-    //     title: 'Assigned',
-    //     detail: 'Assigned',
+    //     title: 'Asset has been Assigned',
+    //     detail: transactionResult.transactionId,
     //     isReadOnly: true,
     //     isManager: true,
     //     severity: 'info ',
+    //     data: {
+    //       transaction: transactionResult._id,
+    //     },
     //   });
     // }
-    // this.notificationWsClient.sendNotification(this.req.user.companyCode, pendingNotification);
+    // this.notificationWsClient.sendNotification(
+    //   this.req.user.companyCode,
+    //   pendingNotification,
+    // );
 
     return transactionResult;
   }
@@ -475,7 +489,6 @@ export class TransactionService {
   }
 
   async approve(updatedData: IAssignmentApproval) {
-    // if approval type is "and"
     if (updatedData.type == 'And') {
       const remainApproval = await this.assignmentApprovalModel.find({
         request: updatedData.request,
@@ -483,13 +496,11 @@ export class TransactionService {
         status: 'Need Approval',
       });
 
-      // check if there is user that is not approve yet
       if (remainApproval.length != 0) {
         return;
       }
     }
 
-    // if approval type is "or"
     if (updatedData.type == 'Or') {
       await this.assignmentApprovalModel.updateMany(
         {
@@ -521,16 +532,22 @@ export class TransactionService {
     // for (const approvalData of nextLevelApprovalData) {
     //   pendingNotification.push({
     //     user: approvalData.user._id.toString(),
-    //     title: 'Waiting for Approval',
-    //     detail: 'Waiting for Approval',
+    //     title: 'Waiting for Assignment Approval',
+    //     detail: updatedData.transactionId,
     //     isReadOnly: true,
     //     isManager: false,
-    //     severity: 'info ',
+    //     severity: 'warning',
+    //     data: {
+    //       transaction: updatedData.transaction,
+    //       request: updatedData.request,
+    //     },
     //   });
     // }
-    // this.notificationWsClient.sendNotification(this.req.user.companyCode, pendingNotification);
+    // this.notificationWsClient.sendNotification(
+    //   this.req.user.companyCode,
+    //   pendingNotification,
+    // );
 
-    // check if there is there is next level approvals
     if (nextLevelApprovalData.length > 0) {
       return;
     }
@@ -543,7 +560,6 @@ export class TransactionService {
   }
 
   async reject(updatedData: IAssignmentApproval) {
-    // if approval type is "or"
     if (updatedData.type == 'Or') {
       const remainApproval = await this.assignmentApprovalModel.find({
         request: updatedData.request,
@@ -551,7 +567,6 @@ export class TransactionService {
         status: 'Need Approval',
       });
 
-      // check if there is user that is not approve yet
       if (remainApproval.length != 0) {
         return;
       }
@@ -572,16 +587,20 @@ export class TransactionService {
     // const transactionData = await this.transactionModel.findById(
     //   updatedData.transaction,
     // );
-    //
+
     // let pendingNotification: CreateNotificationDTO[];
 
     // pendingNotification.push({
     //   user: transactionData.manager._id.toString(),
-    //   title: 'Rejected',
-    //   detail: 'Rejected',
+    //   title: 'Assigment Request Rejected',
+    //   detail: updatedData.transactionId,
     //   isReadOnly: true,
     //   isManager: true,
-    //   severity: 'info ',
+    //   severity: 'danger',
+    //   data: {
+    //     transaction: updatedData.transaction,
+    //     request: updatedData.request,
+    //   },
     // });
 
     // const managers: IUserTransactionRole[] = await this.getManagersPerRole(
@@ -591,14 +610,21 @@ export class TransactionService {
     // for (const manager of managers) {
     //   pendingNotification.push({
     //     user: manager.user._id.toString(),
-    //     title: 'Rejected',
-    //     detail: 'Rejected',
+    //     title: 'Assigment Request Rejected',
+    //     detail: updatedData.transactionId,
     //     isReadOnly: true,
     //     isManager: true,
-    //     severity: 'info ',
+    //     severity: 'danger',
+    //     data: {
+    //       transaction: updatedData.transaction,
+    //       request: updatedData.request,
+    //     },
     //   });
     // }
-    // this.notificationWsClient.sendNotification(this.req.user.companyCode, pendingNotification);
+    // this.notificationWsClient.sendNotification(
+    //   this.req.user.companyCode,
+    //   pendingNotification,
+    // );
   }
 
   async reportMissingRequest(requestId: string, notes?: string) {
@@ -651,19 +677,26 @@ export class TransactionService {
 
     // const trackingManagers: IUserTransactionRole[] =
     //   await this.getManagersPerRole(transactionData.group._id, 'trackingRole');
-    //
+
     // let pendingNotification: CreateNotificationDTO[];
     // for (const manager of trackingManagers) {
     //   pendingNotification.push({
     //     user: manager.user._id.toString(),
-    //     title: 'Report Missing',
-    //     detail: 'Report Missing',
+    //     title: 'Asset ' + newStatus,
+    //     detail: transactionData.transactionId,
     //     isReadOnly: true,
     //     isManager: true,
-    //     severity: 'info ',
+    //     severity: 'danger',
+    //     data: {
+    //       transaction: result.transaction,
+    //       request: result._id,
+    //     },
     //   });
     // }
-    // this.notificationWsClient.sendNotification(this.req.user.companyCode, pendingNotification);
+    // this.notificationWsClient.sendNotification(
+    //   this.req.user.companyCode,
+    //   pendingNotification,
+    // );
 
     return result;
   }
@@ -716,14 +749,21 @@ export class TransactionService {
       // for (const manager of managers) {
       //   pendingNotification.push({
       //     user: manager.user._id.toString(),
-      //     title: 'Unassigned',
-      //     detail: 'Unassigned',
+      //     title: 'Asset has been Unassigned',
+      //     detail: transactionData.transactionId,
       //     isReadOnly: true,
       //     isManager: true,
-      //     severity: 'info ',
+      //     severity: 'success',
+      //     data: {
+      //       transaction: requestData.transaction,
+      //       request: requestData._id,
+      //     },
       //   });
       // }
-      // this.notificationWsClient.sendNotification(this.req.user.companyCode, pendingNotification);
+      // this.notificationWsClient.sendNotification(
+      //   this.req.user.companyCode,
+      //   pendingNotification,
+      // );
 
       await this.updateAssignedTransactionStatus(requestData.transaction);
     }
@@ -779,19 +819,26 @@ export class TransactionService {
     //     transactionData.group._id,
     //     'maintenanceRole',
     //   );
-    //
+
     // let pendingNotification: CreateNotificationDTO[];
     // for (const manager of maintenanceManagers) {
     //   pendingNotification.push({
     //     user: manager.user._id.toString(),
-    //     title: 'Report Damaged',
-    //     detail: 'Report Damaged',
+    //     title: 'Asset ' + newStatus,
+    //     detail: transactionData.transactionId,
     //     isReadOnly: true,
     //     isManager: true,
-    //     severity: 'info ',
+    //     severity: 'danger',
+    //     data: {
+    //       transaction: result.transaction,
+    //       request: result._id,
+    //     },
     //   });
     // }
-    // this.notificationWsClient.sendNotification(this.req.user.companyCode, pendingNotification);
+    // this.notificationWsClient.sendNotification(
+    //   this.req.user.companyCode,
+    //   pendingNotification,
+    // );
 
     return result;
   }
@@ -872,11 +919,11 @@ export class TransactionService {
         },
       );
 
-      // const transaction: IAssignmentTransaction =
-      //   await this.transactionModel.findByIdAndUpdate(transactionId, {
-      //     status: 'Waiting for Handover',
-      //   });
-      //
+      const transaction: IAssignmentTransaction =
+        await this.transactionModel.findByIdAndUpdate(transactionId, {
+          status: 'Waiting for Handover',
+        });
+
       // let pendingNotification: CreateNotificationDTO[];
 
       // const managers: IUserTransactionRole[] = await this.getManagersPerRole(
@@ -886,14 +933,20 @@ export class TransactionService {
       // for (const manager of managers) {
       //   pendingNotification.push({
       //     user: manager.user._id.toString(),
-      //     title: 'Waiting for Handover',
-      //     detail: 'Waiting for Handover',
+      //     title: 'Waiting for Asset Handover',
+      //     detail: transaction.transactionId,
       //     isReadOnly: true,
       //     isManager: true,
-      //     severity: 'info ',
+      //     severity: 'warning',
+      //     data: {
+      //       transaction: transaction._id,
+      //     },
       //   });
       // }
-      // this.notificationWsClient.sendNotification(this.req.user.companyCode, pendingNotification);
+      // this.notificationWsClient.sendNotification(
+      //   this.req.user.companyCode,
+      //   pendingNotification,
+      // );
     }
   }
 
