@@ -7,6 +7,7 @@ import {
   IAssignmentApproval,
   IAssignmentRequest,
   IAssignmentTransaction,
+  IFileDamage,
   ITransactionLog,
   IUserTransactionRole,
 } from 'schemas';
@@ -28,6 +29,9 @@ import { UserTransactionRoleSchema } from '../models/userTransactionRole.model';
 import { AssignmentApprovalSchema } from '../models/assignmentApproval.model';
 import { TransactionLogSchema } from '../models/transactionLog.model';
 import { NotificationWebsocketService } from './notification.websocket.service';
+import { FileDamageSchema } from '../models/fileDamage.model';
+import { IUserAssignmentLog } from 'schemas/interfaces/company/log/userAssignmentLog.interface';
+import { UserAssignmentLogSchema } from '../models/userAssignLog.model';
 
 @Injectable({ scope: Scope.REQUEST })
 export class TransactionService {
@@ -37,6 +41,8 @@ export class TransactionService {
   private assignmentApprovalModel: Model<IAssignmentApproval>;
   private transactionLogModel: Model<ITransactionLog>;
   private assetModel: Model<IAsset>;
+  private fileDamageModel: Model<IFileDamage>;
+  private userAssignmentLogModel: Model<IUserAssignmentLog>;
   constructor(
     @Inject(MongooseConfigService)
     private connectionManager: MongooseConfigService,
@@ -73,6 +79,16 @@ export class TransactionService {
       'transaction_log',
       TransactionLogSchema,
     )) as Model<ITransactionLog>;
+    this.fileDamageModel = (await this.connectionManager.getModel(
+      `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
+      'file_damage',
+      FileDamageSchema,
+    )) as Model<IFileDamage>;
+    this.userAssignmentLogModel = (await this.connectionManager.getModel(
+      `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
+      'user_assignment_log',
+      UserAssignmentLogSchema,
+    )) as Model<IUserAssignmentLog>;
   };
 
   async aggregateApprovals(pipeline: PipelineStage[]): Promise<any[]> {
@@ -147,6 +163,7 @@ export class TransactionService {
             userId: transaction.manager._id,
             userFullName: transaction.manager.fullName,
           });
+
           await this.createApproval(transaction, request);
         }
 
@@ -165,7 +182,6 @@ export class TransactionService {
       roleType: 'Approval',
     });
 
-    console.log(approvers);
     if (approvers.length == 0) {
       await this.requestModel.findByIdAndUpdate(request._id, {
         status: 'Waiting for Handover',
@@ -675,6 +691,14 @@ export class TransactionService {
       detail: { notes: notes },
     });
 
+    await this.userAssignmentLogModel.create({
+      transactionId: transactionData.transactionId,
+      assetName: requestData.assetName.nameWithSequence,
+      action: 'Report Missing',
+      userId: transactionData.assignedTo._id,
+      userFullName: userFullName,
+    });
+
     // const trackingManagers: IUserTransactionRole[] =
     //   await this.getManagersPerRole(transactionData.group._id, 'trackingRole');
 
@@ -769,7 +793,7 @@ export class TransactionService {
     }
   }
 
-  async reportDamagedRequest(requestId: string, notes?: string) {
+  async reportDamagedRequest(requestId: string, image: any, notes?: string) {
     let userFullName;
     let newStatus = 'Report Damaged';
 
@@ -798,6 +822,15 @@ export class TransactionService {
         throw new Unauthorized('You are not a borrowing manager');
       }
       userFullName = isManager.user.fullName;
+
+      await this.fileDamageModel.create({
+        assetImageSmall: image?.small,
+        assetImageMedium: image?.medium,
+        assetImageBig: image?.big,
+        assetName: requestData.assetName.nameWithSequence,
+        group: transactionData.group,
+        modifiedBy: isManager.user,
+      });
     }
 
     const result = await this.requestModel.findByIdAndUpdate(requestId, {
@@ -812,6 +845,14 @@ export class TransactionService {
       userId: new Types.ObjectId(userId),
       userFullName: userFullName,
       detail: { notes: notes },
+    });
+
+    await this.userAssignmentLogModel.create({
+      transactionId: transactionData.transactionId,
+      assetName: requestData.assetName.nameWithSequence,
+      action: 'Report Damaged',
+      userId: transactionData.assignedTo._id,
+      userFullName: userFullName,
     });
 
     // const maintenanceManagers: IUserTransactionRole[] =

@@ -239,6 +239,9 @@ describe('transaction service', () => {
       mockRequestModel.findById.mockResolvedValueOnce({
         transaction: '',
         _id: '',
+        assetName: {
+          nameWithSequence: '',
+        },
       });
 
       mockTransactionModel.findById.mockResolvedValueOnce({

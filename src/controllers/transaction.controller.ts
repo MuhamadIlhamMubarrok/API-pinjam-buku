@@ -267,7 +267,7 @@ export class TransactionController {
     try {
       console.log(image);
 
-      await this.transactionService.reportDamagedRequest(id, body.note);
+      await this.transactionService.reportDamagedRequest(id, image, body.note);
 
       await sendResponse(res, new Success('report updated successfully'));
     } catch (error) {
