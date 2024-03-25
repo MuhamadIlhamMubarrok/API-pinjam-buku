@@ -5,7 +5,6 @@ import {
   Res,
   Put,
   Param,
-  Req,
   Get,
   UploadedFile,
 } from '@nestjs/common';
@@ -17,14 +16,14 @@ import {
   errorResponse,
   sendResponse,
 } from 'utils';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import {
   ArrayOfIdDTO,
   CreateTransactionDTO,
   ReportRequestDTO,
   UpdateApprovalStatusDTO,
-} from 'src/dto/transaction.dto';
-import { getApprovalHistoryListPipeline } from 'src/pipeline/getApprovalHistoryList.pipeline';
+} from '../dto/transaction.dto';
+import { getApprovalHistoryListPipeline } from '../pipeline/getApprovalHistoryList.pipeline';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('/v2/transaction')
@@ -32,12 +31,98 @@ export class TransactionController {
   constructor(private transactionService: TransactionService) {}
 
   @Get('request/:id/transaction-log')
+  @ApiOperation({
+    summary: 'get transaction log list',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Successfully get transaction log list',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'integer', example: 201 },
+        message: {
+          type: 'string',
+          example: 'Successfully get transaction log list',
+        },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string', example: '6600ed5574ca4757a84d7543' },
+              type: { type: 'string', example: 'Assignment' },
+              transaction: {
+                type: 'string',
+                example: '6600ed5574ca4757a84d7543',
+              },
+              transactionId: { type: 'string', example: 'ASG-240325-0001' },
+              assetId: { type: 'string', example: '6600ed5574ca4757a84d7543' },
+              assetName: { type: 'string', example: 'asset name' },
+              action: { type: 'string', example: 'Assignment requested' },
+              userId: { type: 'string', example: '6600ed5574ca4757a84d7543' },
+              userFullName: { type: 'string', example: 'user full name' },
+              createdAt: {
+                type: 'string',
+                example: '2024-03-25T03:19:49.355Z',
+              },
+              updatedAt: {
+                type: 'string',
+                example: '2024-03-25T03:19:49.355Z',
+              },
+              __v: {
+                type: 'integer',
+                example: 2,
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  // retrieve transactions data per assignmentRequest
   async getTransactionLogList(@Res() res: Response, @Param('id') id: string) {
     try {
       const result = await this.transactionService.getTransactionLogList(id);
       await sendResponse(
         res,
-        new Success('report updated successfully', result),
+        new Success('Successfully get transaction log list', result),
+      );
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+  @Put('request/cancel')
+  @ApiOperation({
+    summary: 'Cancel Requests Assignment',
+  })
+  @ApiBody({
+    description: 'all assignmentRequest Id',
+    type: ArrayOfIdDTO,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully cancel designed request',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'integer', example: 200 },
+        message: {
+          type: 'string',
+          example: 'Successfully cancel designed request',
+        },
+      },
+    },
+  })
+  // cancel requests
+  async cancelRequest(@Res() res: Response, @Body() body: ArrayOfIdDTO) {
+    try {
+      await this.transactionService.cancelRequest(body.id);
+
+      await sendResponse(
+        res,
+        new Success('Successfully cancel designed request'),
       );
     } catch (error) {
       console.error(error);
@@ -45,7 +130,104 @@ export class TransactionController {
     }
   }
 
-  @Put('request/:id/mising')
+  @Put('request/unassign')
+  @ApiOperation({
+    summary: 'unassign requests',
+  })
+  @ApiBody({
+    description: 'request id',
+    type: ArrayOfIdDTO,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully unassign request',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'integer', example: 200 },
+        message: {
+          type: 'string',
+          example: 'Successfully unassign request',
+        },
+      },
+    },
+  })
+  // unassign requests
+  async unassignRequest(@Res() res: Response, @Body() body: ArrayOfIdDTO) {
+    try {
+      await this.transactionService.unassignRequest(body.id);
+
+      await sendResponse(res, new Success('Successfully unassign request'));
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+
+  @Put('request/:id/missing')
+  @ApiOperation({
+    summary: 'report missing request',
+  })
+  @ApiBody({
+    description: 'notes (optional)',
+    type: ReportRequestDTO,
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'report updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'integer', example: 200 },
+        message: {
+          type: 'string',
+          example: 'report updated successfully',
+        },
+        data: {
+          type: 'object',
+          properties: {
+            assetName: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '65ea6fc61f39f83ef63583ed' },
+                nameWithSequence: { type: 'string', example: 'Group B' },
+                key: { type: 'integer', example: 1 },
+              },
+            },
+            assetBrand: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '65ea6fc61f39f83ef63583ed' },
+                name: { type: 'string', example: 'Brand B' },
+                key: { type: 'integer', example: 1 },
+              },
+            },
+            assetModel: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '65ea6fc61f39f83ef63583ed' },
+                name: { type: 'string', example: 'Model B' },
+                key: { type: 'integer', example: 1 },
+              },
+            },
+            _id: { type: 'string', example: '65ea6fc61f39f83ef63583ed' },
+            transaction: {
+              type: 'string',
+              example: '65ea6fc61f39f83ef63583ed',
+            },
+            asset: { type: 'string', example: '65ea6fc61f39f83ef63583ed' },
+            status: { type: 'string', example: 'Report Missing' },
+            isVerified: { type: 'boolean', example: false },
+            createdAt: { type: 'string', example: '2024-03-25T01:48:26.653Z' },
+            updatedAt: { type: 'string', example: '2024-03-25T01:48:26.653Z' },
+            __v: { type: 'integer', example: 1 },
+          },
+        },
+      },
+    },
+  })
+  // report missing assignment request
   async reportMissingRequest(
     @Res() res: Response,
     @Param('id') id: string,
@@ -67,6 +249,7 @@ export class TransactionController {
   }
 
   @Put('request/:id/damaged')
+  // report damaged assignment request
   async reportDamagedRequest(
     @Res() res: Response,
     @Param('id') id: string,
@@ -94,13 +277,14 @@ export class TransactionController {
   }
 
   @Get(':id/approval-history')
+  // get all approval history data per transaction
   async getApprovalHistory(@Res() res: Response, @Param('id') id: string) {
     try {
       const list = await this.transactionService.aggregateApprovals(
         getApprovalHistoryListPipeline(id),
       );
 
-      let result = { total: 0, groups: [] };
+      let result = { total: 0, data: [] };
       if (list.length > 0) {
         result = list[0];
       }
@@ -116,6 +300,28 @@ export class TransactionController {
   }
 
   @Post('/')
+  @ApiOperation({
+    summary: 'create transaction',
+  })
+  @ApiBody({
+    description: 'api body',
+    type: [CreateTransactionDTO],
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Successfully created transaction',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'integer', example: 201 },
+        message: {
+          type: 'string',
+          example: 'Successfully created transaction',
+        },
+      },
+    },
+  })
+  // create assignment transaction + assignment request + assignment approval
   async createTransaction(
     @Res() res: Response,
     @Body() body: CreateTransactionDTO[],
@@ -129,67 +335,6 @@ export class TransactionController {
         res,
         new Created('Successfully created transaction', result),
       );
-    } catch (error) {
-      console.error(error);
-      errorResponse(error);
-    }
-  }
-
-  @Put('request/cancel')
-  @ApiOperation({
-    summary: 'Cancel Requests Assignment',
-  })
-  @ApiBody({
-    description: 'all assignmentRequest Id',
-    schema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'array',
-          items: {
-            type: 'string',
-            example: '65ea6fc61f39f83ef63583ec',
-          },
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully cancel designed request',
-    schema: {
-      type: 'object',
-      properties: {
-        status: { type: 'integer', example: 200 },
-        message: {
-          type: 'string',
-          example: 'Successfully cancel designed request',
-        },
-      },
-    },
-  })
-  async cancelRequest(@Res() res: Response, @Body() body: ArrayOfIdDTO) {
-    try {
-      await this.transactionService.cancelRequest(body.id);
-
-      await sendResponse(
-        res,
-        new Success('Successfully cancel designed request'),
-      );
-    } catch (error) {
-      console.error(error);
-      errorResponse(error);
-    }
-  }
-
-  @Put('request/:id/unassign')
-  async unassignRequest(
-    @Req() req: Request,
-    @Res() res: Response,
-    @Body() body: ArrayOfIdDTO,
-  ) {
-    try {
-      await sendResponse(res, new Success('Successfully unassign request'));
     } catch (error) {
       console.error(error);
       errorResponse(error);
@@ -246,6 +391,7 @@ export class TransactionController {
       },
     },
   })
+  // cancel transaction and its related requests
   async cancelTransaction(@Res() res: Response, @Param('id') id: string) {
     try {
       const result = await this.transactionService.cancelTransaction(id);
@@ -261,13 +407,66 @@ export class TransactionController {
   }
 
   @Put(':id/handover')
+  @ApiOperation({
+    summary: 'assign transaction',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully assign transaction',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'integer', example: 200 },
+        message: {
+          type: 'string',
+          example: 'Successfully assign transaction',
+        },
+        data: {
+          type: 'object',
+          properties: {
+            manager: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '65fba1acc5a08cf55f581c7d' },
+                fullName: { type: 'string', example: 'manager name' },
+                key: { type: 'integer', example: 2 },
+              },
+            },
+            group: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '65fba1acc5a08cf55f581c7d' },
+                fullName: { type: 'string', example: 'group name' },
+                key: { type: 'integer', example: 2 },
+              },
+            },
+            assignedTo: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '65fba1acc5a08cf55f581c7d' },
+                fullName: { type: 'string', example: 'user name' },
+                key: { type: 'integer', example: 2 },
+              },
+            },
+            _id: { type: 'String', example: '65fba1acc5a08cf55f581c7f' },
+            transactionId: { type: 'string', example: 'ASG-240321-0001' },
+            status: { type: 'string', example: 'Cancelled' },
+            createdAt: { type: 'string', example: '2024-03-25T01:48:26.641Z' },
+            updatedAt: { type: 'string', example: '2024-03-25T01:48:26.641Z' },
+          },
+        },
+      },
+    },
+  })
+  // assign transaction and its approved requests
   async handoverTransaction(@Res() res: Response, @Param('id') id: string) {
     try {
+      console.log('testing');
       const result = await this.transactionService.handoverTransaction(id);
 
       await sendResponse(
         res,
-        new Success('Successfully created transaction', result),
+        new Success('Successfully assign transaction', result),
       );
     } catch (error) {
       console.error(error);
@@ -276,9 +475,10 @@ export class TransactionController {
   }
 
   @Put('approve')
+  // approve or reject requests
   async approveRequest(
     @Res() res: Response,
-    @Body() body: UpdateApprovalStatusDTO,
+    @Body() body: UpdateApprovalStatusDTO[],
   ) {
     try {
       await this.transactionService.approveRequest(body);

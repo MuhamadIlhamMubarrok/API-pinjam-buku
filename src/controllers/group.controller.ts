@@ -18,7 +18,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import getGroupOptionsPipeline from 'src/pipeline/getGroupOptions.pipeline';
+import getGroupOptionsPipeline from '../pipeline/getGroupOptions.pipeline';
 
 @ApiTags('Group')
 @ApiBearerAuth('access-token')

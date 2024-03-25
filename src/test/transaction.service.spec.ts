@@ -48,6 +48,8 @@ describe('transaction service', () => {
 
   const mockTransactionModel = {
     find: jest.fn(),
+    findOne: jest.fn().mockReturnThis(),
+    sort: jest.fn(),
     insertMany: jest.fn(),
     findById: jest.fn(),
     findByIdAndUpdate: jest.fn().mockReturnThis(),
@@ -157,7 +159,7 @@ describe('transaction service', () => {
     expect(transactionService['transactionModel']).toBeDefined();
   });
 
-  describe('unit testing for => cancelRequest', () => {
+  describe('cancelRequest', () => {
     it('should be success', async () => {
       jest
         .spyOn(transactionService, 'updateTransactionStatus')
@@ -184,7 +186,7 @@ describe('transaction service', () => {
     });
   });
 
-  describe('unit testing for => cancelTransaction', () => {
+  describe('cancelTransaction', () => {
     it('should be success', async () => {
       mockTransactionModel.findById.mockResolvedValueOnce({
         group: { _id: '' },
@@ -199,6 +201,258 @@ describe('transaction service', () => {
       ]);
 
       await transactionService.cancelTransaction('65ea6fc61f39f83ef63583ec');
+    });
+  });
+
+  describe('handoverTransaction', () => {
+    it('should be success', async () => {
+      mockTransactionModel.findById.mockResolvedValueOnce({
+        confirmationEmailConfirmed: true,
+        status: 'Waiting for Handover',
+        group: {
+          _id: '',
+        },
+      });
+
+      jest
+        .spyOn(transactionService, 'isManager')
+        .mockResolvedValue({ user: { _id: '', fullName: '', key: 2 } });
+
+      mockTransactionModel.select.mockResolvedValueOnce({ transactionId: '' });
+
+      mockRequestModel.find.mockResolvedValueOnce([
+        {
+          _id: '',
+          asset: '',
+          assetName: {
+            nameWithSequence: '',
+          },
+        },
+      ]);
+
+      await transactionService.handoverTransaction('65ea7d29f5cd331b5beed2b1');
+    });
+  });
+
+  describe('reportMissingRequest', () => {
+    it('should be success', async () => {
+      mockRequestModel.findById.mockResolvedValueOnce({
+        transaction: '',
+        _id: '',
+      });
+
+      mockTransactionModel.findById.mockResolvedValueOnce({
+        assignedTo: {
+          _id: '',
+          fullName: '',
+        },
+        group: {
+          _id: '',
+        },
+        transactionId: '',
+      });
+
+      jest
+        .spyOn(transactionService, 'isManager')
+        .mockResolvedValue({ user: { _id: '', fullName: '', key: 2 } });
+
+      await transactionService.reportMissingRequest('', '');
+    });
+  });
+
+  describe('unassignRequest', () => {
+    it('should be success', async () => {
+      mockRequestModel.findById.mockResolvedValue({
+        transaction: '',
+        status: 'Assigned',
+        _id: '',
+      });
+
+      mockTransactionModel.findById.mockResolvedValue({
+        group: {
+          _id: '',
+        },
+        transactionId: '',
+      });
+
+      jest
+        .spyOn(transactionService, 'isManager')
+        .mockResolvedValue({ user: { _id: '', fullName: '', key: 2 } });
+
+      jest
+        .spyOn(transactionService, 'updateAssignedTransactionStatus')
+        .mockResolvedValue();
+
+      await transactionService.unassignRequest(['']);
+    });
+  });
+
+  describe('generateTransactionId', () => {
+    it('should be success', async () => {
+      await transactionService.generateTransactionId();
+    });
+  });
+
+  describe('createTransaction', () => {
+    it('should be success', async () => {
+      jest
+        .spyOn(transactionService, 'generateTransactionId')
+        .mockResolvedValue('');
+
+      mockRequestModel.create.mockResolvedValue({
+        _id: '',
+      });
+
+      mockTransactionModel.create.mockResolvedValue({
+        _id: '',
+        manager: {
+          _id: '',
+          fullName: '',
+        },
+        group: {
+          _id: '65ea6fc61f39f83ef63583ed',
+        },
+      });
+
+      jest.spyOn(transactionService, 'createApproval').mockResolvedValue();
+
+      jest
+        .spyOn(transactionService, 'updateTransactionStatus')
+        .mockResolvedValue();
+
+      await transactionService.createTransaction([
+        {
+          asset: '65ea7d29f5cd331b5beed2b1',
+          assetGroup: { _id: '65ea6fc61f39f83ef63583ed', name: 'A', key: 1 },
+          assetName: {
+            _id: '65ea6fc61f39f83ef63583ed',
+            nameWithSequence: 'Grup b',
+            key: 1,
+          },
+          assetBrand: { _id: '65ea6fc61f39f83ef63583ed', name: 'A', key: 1 },
+          assetModel: { _id: '65ea6fc61f39f83ef63583ed', name: 'A', key: 1 },
+          user: { _id: '65ea6fc61f39f83ef63583ed', fullName: 'A', key: 1 },
+        },
+      ]);
+    });
+  });
+  describe('getTransactionLogList', () => {
+    it('should be success', async () => {
+      await transactionService.getTransactionLogList(
+        '6600ed5574ca4757a84d7543',
+      );
+
+      expect(mockTransactionLogModel.find).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('createApproval', () => {
+    it('should be success', async () => {
+      mockModel.find.mockResolvedValueOnce([
+        {
+          approvalLevel: 1,
+          user: {
+            _id: '',
+          },
+          approvalType: 'and',
+        },
+      ]);
+
+      await transactionService.createApproval(
+        {
+          transactionId: '',
+          key: 0,
+          manager: {
+            _id: '',
+            fullName: '',
+            key: 0,
+          },
+          group: {
+            _id: '65ea7d29f5cd331b5beed2b1',
+            name: '',
+            key: 0,
+          },
+          assignedTo: {
+            _id: '',
+            fullName: '',
+            key: 0,
+          },
+        },
+        {},
+      );
+    });
+  });
+
+  describe('approve', () => {
+    it('should be success', async () => {
+      mockApprovalModel.find.mockResolvedValueOnce([{}, {}]);
+
+      mockApprovalModel.find.mockResolvedValueOnce([]);
+
+      await transactionService.approve({
+        type: 'And',
+        request: '',
+        level: 2,
+      });
+    });
+  });
+
+  describe('reject', () => {
+    it('should be success', async () => {
+      mockApprovalModel.find.mockResolvedValueOnce([{}, {}]);
+
+      jest
+        .spyOn(transactionService, 'updateTransactionStatus')
+        .mockResolvedValue();
+
+      await transactionService.reject({
+        type: 'Or',
+        request: '',
+        level: 1,
+        transaction: '',
+      });
+    });
+  });
+
+  describe('isManager', () => {
+    it('should be success', async () => {
+      await transactionService.isManager(
+        '65ea7d29f5cd331b5beed2b1',
+        '65ea7d29f5cd331b5beed2b1',
+      );
+    });
+  });
+
+  describe('getManagersPerRole', () => {
+    it('should be success', async () => {
+      await transactionService.getManagersPerRole(
+        '65ea7d29f5cd331b5beed2b1',
+        '',
+      );
+    });
+  });
+
+  describe('updateTransactionStatus', () => {
+    it('should be success', async () => {
+      mockRequestModel.find.mockResolvedValueOnce([
+        { status: 'Rejected' },
+        { status: 'Cancelled' },
+        { status: 'Approved' },
+        { status: 'Waiting for Handover' },
+      ]);
+
+      await transactionService.updateTransactionStatus(
+        '65ea7d29f5cd331b5beed2b1',
+      );
+    });
+  });
+  describe('updateAssignedTransactionStatus', () => {
+    it('should be success', async () => {
+      mockRequestModel.find.mockResolvedValueOnce([{ status: 'Unassigned' }]);
+
+      await transactionService.updateAssignedTransactionStatus(
+        '65ea7d29f5cd331b5beed2b1',
+      );
     });
   });
 });
