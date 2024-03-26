@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMinSize,
   IsArray,
   IsIn,
   IsMongoId,
@@ -40,6 +41,8 @@ export class ArrayOfIdDTO {
     },
   })
   @IsArray()
+  @IsNotEmpty()
+  @ArrayMinSize(1)
   id: string[];
 }
 

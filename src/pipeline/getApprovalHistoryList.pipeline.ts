@@ -7,9 +7,6 @@ export const getApprovalHistoryListPipeline = (transaction: string) => {
     .match({
       transaction: transactionId,
     })
-    .addFields({
-      user: '$user.fullName',
-    })
     .project({
       user: 1,
       level: 1,

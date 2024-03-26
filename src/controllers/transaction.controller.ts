@@ -329,8 +329,6 @@ export class TransactionController {
     try {
       const result = await this.transactionService.createTransaction(body);
 
-      // await this.transactionService.createTransactionChangelog(result, req.user.id);
-
       await sendResponse(
         res,
         new Created('Successfully created transaction', result),
