@@ -14,7 +14,6 @@ import {
 import { MongooseConfigService } from '../db/db.config';
 import { TransactionSchema, RequestSchema } from '../models/transaction.model';
 import {
-  CreateNotificationDTO,
   CreateTransactionDTO,
   UpdateApprovalStatusDTO,
 } from '../dto/transaction.dto';
@@ -965,6 +964,7 @@ export class TransactionService {
           status: 'Waiting for Handover',
         });
 
+      console.log(transaction);
       // let pendingNotification: CreateNotificationDTO[];
 
       // const managers: IUserTransactionRole[] = await this.getManagersPerRole(
