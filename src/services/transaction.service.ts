@@ -699,28 +699,28 @@ export class TransactionService {
       userFullName: userFullName,
     });
 
-    // const trackingManagers: IUserTransactionRole[] =
-    //   await this.getManagersPerRole(transactionData.group._id, 'trackingRole');
+    const trackingManagers: IUserTransactionRole[] =
+      await this.getManagersPerRole(transactionData.group._id, 'trackingRole');
 
-    // let pendingNotification: CreateNotificationDTO[];
-    // for (const manager of trackingManagers) {
-    //   pendingNotification.push({
-    //     user: manager.user._id.toString(),
-    //     title: 'Asset ' + newStatus,
-    //     detail: transactionData.transactionId,
-    //     isReadOnly: true,
-    //     isManager: true,
-    //     severity: 'danger',
-    //     data: {
-    //       transaction: result.transaction,
-    //       request: result._id,
-    //     },
-    //   });
-    // }
-    // this.notificationWsClient.sendNotification(
-    //   this.req.user.companyCode,
-    //   pendingNotification,
-    // );
+    let pendingNotification: CreateNotificationDTO[];
+    for (const manager of trackingManagers) {
+      pendingNotification.push({
+        user: manager.user._id.toString(),
+        title: 'Asset ' + newStatus,
+        detail: transactionData.transactionId,
+        isReadOnly: true,
+        isManager: true,
+        severity: 'danger',
+        data: {
+          transaction: result.transaction,
+          request: result._id,
+        },
+      });
+    }
+    this.notificationWsClient.sendNotification(
+      this.req.user.companyCode,
+      pendingNotification,
+    );
 
     return result;
   }

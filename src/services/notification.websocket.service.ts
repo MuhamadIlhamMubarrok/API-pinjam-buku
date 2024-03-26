@@ -7,7 +7,7 @@ export class NotificationWebsocketService {
   private socket: Socket;
 
   constructor() {
-    const url = `http://localhost:${process.env.PORT}`;
+    const url = process.env.NOTIFICATION_API;
     this.socket = io(url);
     this.socket.on('open', () => {
       console.log('WebSocket client connected');
