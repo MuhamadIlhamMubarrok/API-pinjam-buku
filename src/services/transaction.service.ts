@@ -14,6 +14,7 @@ import {
 import { MongooseConfigService } from '../db/db.config';
 import { TransactionSchema, RequestSchema } from '../models/transaction.model';
 import {
+  CreateNotificationDTO,
   CreateTransactionDTO,
   UpdateApprovalStatusDTO,
 } from '../dto/transaction.dto';
