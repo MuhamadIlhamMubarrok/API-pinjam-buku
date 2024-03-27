@@ -8,6 +8,7 @@ import {
   IAssignmentRequest,
   IAssignmentTransaction,
   IFileDamage,
+  IGroup,
   ITransactionLog,
   IUserTransactionRole,
 } from 'schemas';
@@ -24,6 +25,7 @@ import {
   NotFound,
   Forbidden,
   Unauthorized,
+  isManager,
 } from 'utils';
 import { UserTransactionRoleSchema } from '../models/userTransactionRole.model';
 import { AssignmentApprovalSchema } from '../models/assignmentApproval.model';
@@ -32,6 +34,7 @@ import { NotificationWebsocketService } from './notification.websocket.service';
 import { FileDamageSchema } from '../models/fileDamage.model';
 import { IUserAssignmentLog } from 'schemas/interfaces/company/log/userAssignmentLog.interface';
 import { UserAssignmentLogSchema } from '../models/userAssignLog.model';
+import { GroupSchema } from '../models/group.model';
 
 @Injectable({ scope: Scope.REQUEST })
 export class TransactionService {
@@ -43,6 +46,7 @@ export class TransactionService {
   private assetModel: Model<IAsset>;
   private fileDamageModel: Model<IFileDamage>;
   private userAssignmentLogModel: Model<IUserAssignmentLog>;
+  private groupModel: Model<IGroup>;
   constructor(
     @Inject(MongooseConfigService)
     private connectionManager: MongooseConfigService,
@@ -89,6 +93,11 @@ export class TransactionService {
       'user_assignment_log',
       UserAssignmentLogSchema,
     )) as Model<IUserAssignmentLog>;
+    this.groupModel = (await this.connectionManager.getModel(
+      `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
+      'groups',
+      GroupSchema,
+    )) as Model<IGroup>;
   };
 
   async aggregateApprovals(pipeline: PipelineStage[]): Promise<any[]> {
@@ -239,9 +248,16 @@ export class TransactionService {
   async cancelTransaction(id: string) {
     const userId = this.req.user.id;
     const transactionData = await this.transactionModel.findById(id);
-    const isManager = await this.isManager(transactionData.group._id, userId);
+    const manager: IUserTransactionRole = await isManager(
+      this.groupModel,
+      this.userTransactionRoleModel,
+      transactionData.group._id,
+      userId,
+      'borrowingRole',
+      ['Manager'],
+    );
 
-    if (!isManager) {
+    if (!manager) {
       throw new Unauthorized('You are not a borrowing manager');
     }
 
@@ -294,8 +310,8 @@ export class TransactionService {
         assetId: requestData.asset,
         assetName: requestData.assetName.nameWithSequence,
         action: 'Cancelled',
-        userId: isManager.user._id,
-        userFullName: isManager.user.fullName,
+        userId: manager.user._id,
+        userFullName: manager.user.fullName,
       });
     }
 
@@ -313,8 +329,17 @@ export class TransactionService {
       const transactionData = await this.transactionModel.findById(
         requestData.transaction,
       );
-      const isManager = await this.isManager(transactionData.group._id, userId);
-      if (!isManager) {
+
+      const manager: IUserTransactionRole = await isManager(
+        this.groupModel,
+        this.userTransactionRoleModel,
+        transactionData.group._id,
+        userId,
+        'borrowingRole',
+        ['Manager'],
+      );
+
+      if (!manager) {
         throw new Unauthorized('You are not a borrowing manager');
       }
       const requestResult = await this.requestModel
@@ -339,8 +364,8 @@ export class TransactionService {
         assetId: requestResult.asset,
         assetName: requestResult.assetName.nameWithSequence,
         action: 'Cancelled',
-        userId: isManager.user._id,
-        userFullName: isManager.user.fullName,
+        userId: manager.user._id,
+        userFullName: manager.user.fullName,
       });
     }
   }
@@ -357,12 +382,16 @@ export class TransactionService {
       throw new Error('transaction status is not "waiting for handover"');
     }
 
-    const isManager: IUserTransactionRole = await this.isManager(
+    const manager: IUserTransactionRole = await isManager(
+      this.groupModel,
+      this.userTransactionRoleModel,
       transactionData.group._id,
       userId,
+      'borrowingRole',
+      ['Manager'],
     );
 
-    if (!isManager) {
+    if (!manager) {
       throw new Unauthorized('You are not a borrowing manager');
     }
 
@@ -411,7 +440,7 @@ export class TransactionService {
         assetName: requestData.assetName.nameWithSequence,
         action: 'Handed over',
         userId: userId,
-        userFullName: isManager.user.fullName,
+        userFullName: manager.user.fullName,
       });
     }
 
@@ -663,15 +692,19 @@ export class TransactionService {
       userFullName = transactionData.assignedTo.fullName;
       newStatus = newStatus + ' by User';
     } else {
-      const isManager: IUserTransactionRole = await this.isManager(
+      const manager: IUserTransactionRole = await isManager(
+        this.groupModel,
+        this.userTransactionRoleModel,
         transactionData.group._id,
         userId,
+        'borrowingRole',
+        ['Manager'],
       );
 
-      if (!isManager) {
+      if (!manager) {
         throw new Unauthorized('You are not a borrowing manager');
       }
-      userFullName = isManager.user.fullName;
+      userFullName = manager.user.fullName;
     }
     const result = await this.requestModel.findByIdAndUpdate(
       requestId,
@@ -742,12 +775,16 @@ export class TransactionService {
         requestData.transaction,
       );
 
-      const isManager: IUserTransactionRole = await this.isManager(
+      const manager: IUserTransactionRole = await isManager(
+        this.groupModel,
+        this.userTransactionRoleModel,
         transactionData.group._id,
         userId,
+        'borrowingRole',
+        ['Manager'],
       );
 
-      if (!isManager) {
+      if (!manager) {
         throw new Unauthorized('You are not a borrowing manager');
       }
 
@@ -761,7 +798,7 @@ export class TransactionService {
         transaction: requestData._id,
         action: 'Unassigned',
         userId: new Types.ObjectId(userId),
-        userFullName: isManager.user.fullName,
+        userFullName: manager.user.fullName,
       });
 
       // let pendingNotification: CreateNotificationDTO[];
@@ -813,15 +850,19 @@ export class TransactionService {
       userFullName = transactionData.assignedTo.fullName;
       newStatus = newStatus + ' by User';
     } else {
-      const isManager: IUserTransactionRole = await this.isManager(
+      const manager: IUserTransactionRole = await isManager(
+        this.groupModel,
+        this.userTransactionRoleModel,
         transactionData.group._id,
         userId,
+        'borrowingRole',
+        ['Manager'],
       );
 
-      if (!isManager) {
+      if (!manager) {
         throw new Unauthorized('You are not a borrowing manager');
       }
-      userFullName = isManager.user.fullName;
+      userFullName = manager.user.fullName;
 
       await this.fileDamageModel.create({
         assetImageSmall: image?.small,
@@ -829,7 +870,7 @@ export class TransactionService {
         assetImageBig: image?.big,
         assetName: requestData.assetName.nameWithSequence,
         group: transactionData.group,
-        modifiedBy: isManager.user,
+        modifiedBy: manager.user,
       });
     }
 
@@ -882,19 +923,6 @@ export class TransactionService {
     // );
 
     return result;
-  }
-
-  async isManager(
-    groupId: string | Types.ObjectId,
-    userId: string | Types.ObjectId,
-  ): Promise<IUserTransactionRole> {
-    return await this.userTransactionRoleModel.findOne({
-      'group._id': new Types.ObjectId(groupId),
-      transactionGroupAttribute: 'borrowingRole',
-      'user._id': new Types.ObjectId(userId),
-      roleType: 'Manager',
-      isActive: true,
-    });
   }
 
   async getManagersPerRole(groupId: string | Types.ObjectId, role: string) {
