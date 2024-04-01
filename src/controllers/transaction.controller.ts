@@ -25,10 +25,14 @@ import {
 } from '../dto/transaction.dto';
 import { getApprovalHistoryListPipeline } from '../pipeline/getApprovalHistoryList.pipeline';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApprovalService } from '../services/approval.service';
 
 @Controller('/v2/transaction')
 export class TransactionController {
-  constructor(private transactionService: TransactionService) {}
+  constructor(
+    private transactionService: TransactionService,
+    private approvalService: ApprovalService,
+  ) {}
 
   @Get('request/:id/transaction-log')
   @ApiOperation({
@@ -474,12 +478,12 @@ export class TransactionController {
 
   @Put('approve')
   // approve or reject requests
-  async approveRequest(
+  async approval(
     @Res() res: Response,
     @Body() body: UpdateApprovalStatusDTO[],
   ) {
     try {
-      await this.transactionService.approveRequest(body);
+      await this.approvalService.approval(body);
 
       await sendResponse(res, new Success('Successfully created transaction'));
     } catch (error) {

@@ -24,7 +24,7 @@ export class NotificationWebsocketService {
 
   sendNotification(companyCode: string, data: CreateNotificationDTO[]) {
     if (this.socket.connected) {
-      this.socket.emit('notification', {
+      this.socket.emit('notifications', {
         companyCode: companyCode,
         data: data,
       });
