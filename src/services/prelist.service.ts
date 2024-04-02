@@ -19,7 +19,7 @@ import { CreatePrelistDTO } from '../dto/prelist.dto';
 @Injectable({ scope: Scope.REQUEST })
 export class PrelistService {
   private prelistModel: Model<IAssignmentPrelist>;
-  private PrelistRequestModel: Model<IAssignmentPrelistRequest>;
+  private prelistRequestModel: Model<IAssignmentPrelistRequest>;
   private assetModel: Model<IAsset>;
   private userModel: Model<IUser>;
 
@@ -39,7 +39,7 @@ export class PrelistService {
       AssignmentPrelistSchema,
     )) as Model<IAssignmentPrelist>;
 
-    this.PrelistRequestModel = (await this.connectionManager.getModel(
+    this.prelistRequestModel = (await this.connectionManager.getModel(
       `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
       'assignment_prelist_request',
       AssignmentPrelistRequestSchema,
@@ -62,7 +62,7 @@ export class PrelistService {
   }
 
   async aggregatePrelistRequest(pipeline: PipelineStage[]): Promise<any[]> {
-    return await this.PrelistRequestModel.aggregate(pipeline);
+    return await this.prelistRequestModel.aggregate(pipeline);
   }
 
   async createPrelist(data: CreatePrelistDTO) {
@@ -132,8 +132,43 @@ export class PrelistService {
           prelist: PrelistData._id,
           ...assetData,
         });
-        await this.PrelistRequestModel.insertMany(pendingPrelist);
+        await this.prelistRequestModel.insertMany(pendingPrelist);
       }
     }
+  }
+
+  async removePrelists(ids: string[] | Types.ObjectId[]) {
+    ids = ids.map((x) => {
+      return new Types.ObjectId(x);
+    });
+
+    await this.prelistModel.deleteMany({
+      _id: { $in: ids },
+    });
+
+    await this.prelistRequestModel.deleteMany({
+      prelist: { $in: ids },
+    });
+  }
+
+  async removePrelistReqests(ids: string[] | Types.ObjectId[]) {
+    ids = ids.map((x) => {
+      return new Types.ObjectId(x);
+    });
+
+    const singlePrelistRequestData = await this.prelistRequestModel.findById(
+      ids[0],
+    );
+    const prelistData = await this.prelistModel.findById(
+      singlePrelistRequestData.prelist,
+    );
+
+    const deleteResult = await this.prelistRequestModel.deleteMany({
+      _id: { $in: ids },
+    });
+
+    await this.prelistModel.findByIdAndUpdate(prelistData._id, {
+      $inc: { totalAssets: -deleteResult.deletedCount },
+    });
   }
 }

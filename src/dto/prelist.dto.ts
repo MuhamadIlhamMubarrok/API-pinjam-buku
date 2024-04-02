@@ -1,7 +1,27 @@
 import { Injectable, PipeTransform } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsMongoId, IsNotEmpty, IsOptional } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsMongoId,
+  IsNotEmpty,
+  IsOptional,
+} from 'class-validator';
 import { Types } from 'mongoose';
+
+export class ArrayOfIdDTO {
+  @ApiProperty({
+    type: 'array',
+    items: {
+      type: 'string',
+      example: '65ea7d29f5cd331b5beed2b1',
+    },
+  })
+  @IsArray()
+  @IsNotEmpty()
+  @ArrayMinSize(1)
+  id: string[];
+}
 
 export class CreatePrelistDTO {
   @ApiProperty({ type: [String], example: ['65ea6fc61f39f83ef63583ed'] })

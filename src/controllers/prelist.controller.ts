@@ -1,8 +1,18 @@
-import { Controller, Post, Body, Res, Get, Query, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  Get,
+  Query,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { Success, errorResponse, sendResponse } from 'utils';
 import { Response } from 'express';
 import { PrelistService } from '../services/prelist.service';
 import {
+  ArrayOfIdDTO,
   CreatePrelistDTO,
   GetPrelistDTO,
   GetPrelistDTOPipe,
@@ -485,6 +495,77 @@ export class PrelistController {
     try {
       await this.prelistService.createPrelist(body);
       await sendResponse(res, new Success('Successfully create  prelist'));
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+
+  @Delete()
+  @ApiOperation({
+    summary: 'Delete prelist data',
+  })
+  @ApiBody({
+    description: 'Request Body',
+    type: ArrayOfIdDTO,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully delete prelist',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'number', example: 200 },
+        message: { type: 'string', example: 'Successfully delete prelist' },
+      },
+    },
+  })
+  // delete assignment prelist and related assignment prelist request
+  async removePrelists(@Res() res: Response, @Body() body: ArrayOfIdDTO) {
+    try {
+      await this.prelistService.removePrelists(body.id);
+
+      await sendResponse(res, new Success('Successfully delete prelist'));
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+
+  @Delete('request')
+  @ApiOperation({
+    summary: 'delete assignment prelist requests',
+  })
+  @ApiBody({
+    description: 'Request Body',
+    type: ArrayOfIdDTO,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully delete prelist request',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'number', example: 200 },
+        message: {
+          type: 'string',
+          example: 'Successfully delete prelist request',
+        },
+      },
+    },
+  })
+  // delete assignment prelist request data
+  async removePrelistRequests(
+    @Res() res: Response,
+    @Body() body: ArrayOfIdDTO,
+  ) {
+    try {
+      await this.prelistService.removePrelistReqests(body.id);
+
+      await sendResponse(
+        res,
+        new Success('Successfully delete prelist request'),
+      );
     } catch (error) {
       console.error(error);
       errorResponse(error);
