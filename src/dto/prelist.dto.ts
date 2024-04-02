@@ -18,6 +18,8 @@ export class CreatePrelistDTO {
 export class GetPrelistDTO {
   @IsOptional()
   search?: string;
+  @IsOptional()
+  prelistId?: string;
 
   @IsOptional()
   page?: string | number;

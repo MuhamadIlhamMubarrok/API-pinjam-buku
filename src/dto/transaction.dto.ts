@@ -116,22 +116,6 @@ export class CreateTransactionDTO {
   @IsString()
   asset: string;
 
-  @ApiProperty({ type: CreateTransactionAssetNameDTO })
-  @IsNotEmpty()
-  assetName: CreateTransactionAssetNameDTO;
-
-  @ApiProperty({ type: CreateTransactionAttributeDTO })
-  @IsNotEmpty()
-  assetBrand: CreateTransactionAttributeDTO;
-
-  @ApiProperty({ type: CreateTransactionAttributeDTO })
-  @IsNotEmpty()
-  assetModel: CreateTransactionAttributeDTO;
-
-  @ApiProperty({ type: CreateTransactionAttributeDTO })
-  @IsNotEmpty()
-  assetGroup: CreateTransactionAttributeDTO;
-
   @ApiProperty({ type: CreateTransactionUserDTO })
   @IsNotEmpty()
   user: CreateTransactionUserDTO;

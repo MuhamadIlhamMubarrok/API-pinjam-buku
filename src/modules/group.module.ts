@@ -1,6 +1,10 @@
 import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { GroupController } from '../controllers/group.controller';
 import { GroupService } from '../services/group.service';
+import { ApprovalService } from '../services/approval.service';
+import { AssetService } from '../services/asset.service';
+import { UserService } from '../services/user.service';
+import { PrelistService } from '../services/prelist.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GroupSchema } from '../models/group.model';
 import { MongooseConfigService } from 'src/db/db.config';
@@ -24,6 +28,10 @@ import { SetUploadMiddleware } from 'utils';
     GroupService,
     MongooseConfigService,
     TransactionService,
+    ApprovalService,
+    PrelistService,
+    AssetService,
+    UserService,
     NotificationWebsocketService,
   ],
 })

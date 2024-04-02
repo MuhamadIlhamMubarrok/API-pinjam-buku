@@ -30,6 +30,11 @@ export class ApprovalService {
   private transactionModel: Model<IAssignmentTransaction>;
   private assignmentApprovalModel: Model<IAssignmentApproval>;
   private transactionLogModel: Model<ITransactionLog>;
+  private userAssignmentLogModel: Model<IUserAssignmentLog>;
+  private groupModel: Model<IGroup>;
+  private fileDamageModel: Model<IFileDamage>;
+  private userTransactionRoleModel: Model<IUserTransactionRole>;
+
   constructor(
     @Inject(MongooseConfigService)
     private connectionManager: MongooseConfigService,

@@ -16,7 +16,6 @@ import { MongooseConfigService } from '../db/db.config';
 import { TransactionSchema, RequestSchema } from '../models/transaction.model';
 import {
   CreateNotificationDTO,
-  CreateTransactionDTO,
   UpdateApprovalStatusDTO,
 } from '../dto/transaction.dto';
 import {
@@ -130,13 +129,11 @@ export class TransactionService {
     return `ASG-${currentDate}-0001`;
   }
 
-  async createTransaction(body: CreateTransactionDTO[]) {
-    const groupedTransactionByGroup = await groupBy(
-      body as any[],
-      'assetGroup._id',
-    );
+  async createTransaction(body: { user: string; assets: IAsset }[]) {
+    const groupedTransactionByGroup = groupBy(body as any[], 'asset.group._id');
+
     for (const groupId of Object.keys(groupedTransactionByGroup)) {
-      const groupedDataByUser = await groupBy(
+      const groupedDataByUser = groupBy(
         groupedTransactionByGroup[groupId],
         'user._id',
       );
@@ -159,23 +156,25 @@ export class TransactionService {
           },
         });
         for (const assetData of assets) {
-          assetData.assetName.nameWithSequence = assetData.assetName.name;
           const request = await this.requestModel.create({
             transaction,
-            asset: assetData.asset,
-            assetName: assetData.assetName,
-            assetGroup: assetData.assetGroup,
-            assetBrand: assetData.assetBrand,
-            assetModel: assetData.assetModel,
+            asset: assetData.asset._id,
+            assetName: assetData.asset.name,
+            assetGroup: assetData.asset.group,
+            assetBrand: assetData.asset.brand,
+            assetModel: assetData.asset.model,
             assignedTo: assetData.user,
+            assetTagType: assetData.asset.tagType,
+            assetQr: assetData.asset.qr?.code != null,
+            assetRfid: assetData.asset.rfid?.code != null,
           });
 
           await this.transactionLogModel.create({
             type: 'Assignment',
             transactionId: transactionId,
             transaction: request._id,
-            assetId: assetData.asset,
-            assetName: assetData.assetName.nameWithSequence,
+            assetId: assetData.asset._id,
+            assetName: assetData.asset.name.nameWithSequence,
             action: 'Assignment requested',
             userId: transaction.manager._id,
             userFullName: transaction.manager.fullName,
@@ -183,8 +182,6 @@ export class TransactionService {
 
           await this.createApproval(transaction, request);
         }
-
-        await this.updateTransactionStatus(transaction._id);
       }
     }
   }
@@ -356,7 +353,7 @@ export class TransactionService {
         })
         .select({ _id: 1, transaction: 1, asset: 1, assetName: 1, status: 1 });
 
-      await this.updateTransactionStatus(requestResult.transaction);
+      // await this.updateTransactionStatus(requestResult.transaction);
 
       await this.assignmentApprovalModel.updateMany(
         {
@@ -576,7 +573,7 @@ export class TransactionService {
       status: 'Approved',
     });
 
-    await this.updateTransactionStatus(updatedData.transaction);
+    // await this.updateTransactionStatus(updatedData.transaction);
   }
 
   async reject(updatedData: IAssignmentApproval) {
@@ -602,7 +599,7 @@ export class TransactionService {
       status: 'Rejected',
     });
 
-    await this.updateTransactionStatus(updatedData.transaction);
+    // await this.updateTransactionStatus(updatedData.transaction);
 
     // const transactionData = await this.transactionModel.findById(
     //   updatedData.transaction,
@@ -989,9 +986,12 @@ export class TransactionService {
   }
 
   async getTransactionLogList(requestId: string | Types.ObjectId) {
-    return await this.transactionLogModel.find({
+    const logs = await this.transactionLogModel.find({
       transaction: new Types.ObjectId(requestId),
     });
+    const detail = await this.requestModel.findById(requestId);
+
+    return { logs, detail };
   }
 
   async updateAssignedTransactionStatus(

@@ -11,6 +11,7 @@ import {
 import { TransactionService } from '../services/transaction.service';
 import {
   Created,
+  NotFound,
   SplitImagePipe,
   Success,
   errorResponse,
@@ -26,12 +27,16 @@ import {
 import { getApprovalHistoryListPipeline } from '../pipeline/getApprovalHistoryList.pipeline';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ApprovalService } from '../services/approval.service';
+import { AssetService } from '../services/asset.service';
+import { UserService } from '../services/user.service';
 
 @Controller('/v2/transaction')
 export class TransactionController {
   constructor(
     private transactionService: TransactionService,
     private approvalService: ApprovalService,
+    private assetService: AssetService,
+    private userService: UserService,
   ) {}
 
   @Get('request/:id/transaction-log')
@@ -331,7 +336,28 @@ export class TransactionController {
     @Body() body: CreateTransactionDTO[],
   ) {
     try {
-      const result = await this.transactionService.createTransaction(body);
+      const detailedData = [];
+
+      for (const createData of body) {
+        const asset = await this.assetService.getOneAsset({
+          _id: createData.asset,
+          status: 'Available',
+        });
+        const user = await this.userService.getOneUser({
+          _id: createData.user,
+          isDeleted: false,
+          isActive: true,
+        });
+        if (asset && user) {
+          detailedData.push({ asset, user });
+        }
+      }
+      if (!detailedData.length) {
+        throw new NotFound('Assets _id are invalid in request body');
+      }
+
+      const result =
+        await this.transactionService.createTransaction(detailedData);
 
       await sendResponse(
         res,
