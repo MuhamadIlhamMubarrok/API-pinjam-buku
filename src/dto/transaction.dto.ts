@@ -80,21 +80,6 @@ export class CreateNotificationDTO {
   data?: any;
 }
 
-export class CreateTransactionUserDTO {
-  @ApiProperty({ type: 'string', example: '65ea7d29f5cd331b5beed2b1' })
-  @IsNotEmpty()
-  @IsMongoId()
-  _id: string;
-
-  @ApiProperty({ type: 'string', example: 'full name' })
-  @IsNotEmpty()
-  fullName: string;
-
-  @ApiProperty({ type: 'integer', example: 4 })
-  @IsNotEmpty()
-  key: number;
-}
-
 export class CreateTransactionAssetNameDTO {
   @ApiProperty({ type: 'string', example: '65ea7d29f5cd331b5beed2b1' })
   @IsNotEmpty()
@@ -116,7 +101,7 @@ export class CreateTransactionDTO {
   @IsString()
   asset: string;
 
-  @ApiProperty({ type: CreateTransactionUserDTO })
+  @ApiProperty({ type: 'string', example: '65ea7d29f5cd331b5beed2b1' })
   @IsNotEmpty()
-  user: CreateTransactionUserDTO;
+  user: string;
 }
