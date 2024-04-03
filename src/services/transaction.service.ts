@@ -513,6 +513,85 @@ export class TransactionService {
     return transactionResult;
   }
 
+  async updateTransactionStatus(transactionId: string | Types.ObjectId) {
+    const relatedRequests: IAssignmentRequest[] = await this.requestModel.find({
+      transaction: new Types.ObjectId(transactionId),
+    });
+
+    const rejectedRequest = relatedRequests.filter(
+      (request) => request.status == 'Rejected',
+    );
+    const cancelledRequest = relatedRequests.filter(
+      (request) => request.status == 'Cancelled',
+    );
+    const approvedRequest = relatedRequests.filter(
+      (request) => request.status == 'Approved',
+    );
+
+    const waitingForHandoverRequest = relatedRequests.filter(
+      (request) => request.status == 'Waiting for Handover',
+    );
+
+    const totalFinishedRequest =
+      rejectedRequest.length +
+      cancelledRequest.length +
+      approvedRequest.length +
+      waitingForHandoverRequest.length;
+
+    if (totalFinishedRequest < relatedRequests.length) {
+      return;
+    }
+
+    if (cancelledRequest.length == relatedRequests.length) {
+      this.transactionModel.findByIdAndUpdate(transactionId, {
+        status: 'Cancelled',
+      });
+    } else if (rejectedRequest.length == relatedRequests.length) {
+      this.transactionModel.findByIdAndUpdate(transactionId, {
+        status: 'Rejected',
+      });
+    } else {
+      this.requestModel.updateMany(
+        {
+          transaction: new Types.ObjectId(transactionId),
+          status: 'Approved',
+        },
+        {
+          status: 'Waiting for Handover',
+        },
+      );
+
+      const transaction: IAssignmentTransaction =
+        await this.transactionModel.findByIdAndUpdate(transactionId, {
+          status: 'Waiting for Handover',
+        });
+
+      const pendingNotification: CreateNotificationDTO[] = [];
+
+      const managers: IUserTransactionRole[] = await this.getManagersPerRole(
+        transaction.group._id,
+        'borrowingRole',
+      );
+      for (const manager of managers) {
+        pendingNotification.push({
+          user: manager.user._id.toString(),
+          title: 'Waiting for Asset Handover',
+          detail: transaction.transactionId,
+          isReadOnly: true,
+          isManager: true,
+          severity: 'warning',
+          data: {
+            transaction: transaction._id,
+          },
+        });
+      }
+      this.notificationWsClient.sendNotification(
+        this.req.user.companyCode,
+        pendingNotification,
+      );
+    }
+  }
+
   async approveRequest(datas: UpdateApprovalStatusDTO[]) {
     for (const data of datas) {
       const userId = this.req.user.id;
