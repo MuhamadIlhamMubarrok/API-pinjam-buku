@@ -114,6 +114,25 @@ export class TransactionService {
   async aggregateTransactions(pipeline: PipelineStage[]): Promise<any[]> {
     return await this.transactionModel.aggregate(pipeline);
   }
+  async aggregateRequests(pipeline: PipelineStage[]): Promise<any[]> {
+    return await this.requestModel.aggregate(pipeline);
+  }
+
+  async getTransactionDetail(transactionId: string) {
+    return await this.transactionModel.findById(transactionId, {
+      manager: 1,
+      group: 1,
+      assignedTo: 1,
+      _id: 1,
+      totalAssets: 1,
+      transactionId: 1,
+      status: 1,
+      desc: 1,
+      curApprovalLevel: 1,
+      isVerified: 1,
+      updatedAt: 1,
+    });
+  }
 
   async generateTransactionId() {
     const currentDate = getCurrentDate();

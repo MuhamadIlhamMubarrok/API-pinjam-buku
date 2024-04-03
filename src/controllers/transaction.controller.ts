@@ -22,6 +22,10 @@ import { Response } from 'express';
 import {
   ArrayOfIdDTO,
   CreateTransactionDTO,
+  GetRequestListDTO,
+  GetRequestListDTOPipe,
+  GetRequestOptionDTO,
+  GetRequestOptionsDTOPipe,
   GetTransactionListDTO,
   GetTransactionListDTOPipe,
   GetTransactionOptionDTO,
@@ -36,6 +40,8 @@ import { AssetService } from '../services/asset.service';
 import { UserService } from '../services/user.service';
 import getTransactionOptionPipeline from '../pipeline/getTransactionOption.pipeline';
 import getTransactionListPipeline from '../pipeline/getTransactionList.pipeline';
+import getRequestOptionPipeline from '../pipeline/getRequestOption.pipeline';
+import getRequestListPipeline from '../pipeline/getRequestList.pipeline';
 
 @Controller('/v2/transaction')
 export class TransactionController {
@@ -281,6 +287,289 @@ export class TransactionController {
         new Success(
           'Successfully get assignment transaction options',
           response,
+        ),
+      );
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get single detailed assignment transaction data',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully Get Assignment Transaction Detail',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'number', example: 200 },
+        message: {
+          type: 'string',
+          example: 'Successfully Get Assignment Transaction Data',
+        },
+        data: {
+          type: 'object',
+          properties: {
+            manager: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '65ea6fc61f39f83ef63583ed' },
+                fullName: { type: 'string', example: 'full name' },
+                key: { type: 'number', example: 3 },
+              },
+            },
+            group: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '65ea6fc61f39f83ef63583ed' },
+                name: { type: 'string', example: 'group name' },
+                key: { type: 'number', example: 3 },
+              },
+            },
+            assignedTo: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '65ea6fc61f39f83ef63583ed' },
+                fullName: { type: 'string', example: 'full name' },
+                key: { type: 'number', example: 3 },
+              },
+            },
+            _id: { type: 'string', example: '65ea6fc61f39f83ef63583ed' },
+            totalAssets: { type: 'number', example: 2 },
+            transactionId: { type: 'string', example: 'ASG-240401-0004' },
+            status: { type: 'string', example: 'Waiting for Approval' },
+            desc: { type: 'string' },
+            curApprovalLevel: { type: 'number', example: 3 },
+            isVerified: { type: 'boolean', example: false },
+            updatedAt: { type: 'string', example: '2024-04-01T07:57:16.466Z' },
+          },
+        },
+      },
+    },
+  })
+  // get single detailed assignment transaction data
+  async getSingleAssignmentTransactionData(
+    @Res() res: Response,
+    @Param('id') id: string,
+  ) {
+    try {
+      const result = await this.transactionService.getTransactionDetail(id);
+
+      await sendResponse(
+        res,
+        new Success('Successfully Get Assignment Transaction Detail', result),
+      );
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+  @Get(':id/request')
+  @ApiOperation({
+    summary: 'get assignment transaction details',
+  })
+  @ApiQuery({
+    name: 'Query Params',
+    type: GetRequestListDTO,
+  })
+  @ApiQuery({
+    type: String,
+    name: 'search',
+    required: false,
+  })
+  @ApiQuery({
+    type: Number,
+    name: 'page',
+    required: false,
+  })
+  @ApiQuery({
+    type: Number,
+    name: 'limit',
+    required: false,
+  })
+  @ApiQuery({
+    type: String,
+    name: 'sortBy',
+    required: false,
+  })
+  @ApiQuery({
+    type: Number,
+    name: 'sortOrder',
+    required: false,
+  })
+  @ApiQuery({
+    type: [Number],
+    name: 'name',
+    required: false,
+  })
+  @ApiQuery({
+    type: [Number],
+    name: 'brand',
+    required: false,
+  })
+  @ApiQuery({
+    type: [Number],
+    name: 'model',
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully get assignment transaction detail',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'integer', example: 200 },
+        message: {
+          type: 'string',
+          example: 'Successfully get assignment transaction detail',
+        },
+        data: {
+          type: 'object',
+          properties: {
+            totalRecords: { type: 'integer', example: 3 },
+            data: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  _id: { type: 'string', example: '6600ed5574ca4757a84d753d' },
+                  assetImageSmall: { type: 'string', example: 'small.pjg' },
+                  assetImageBig: { type: 'string', example: 'big.pjg' },
+                  name: { type: 'string', example: 'asset name' },
+                  brand: { type: 'string', example: 'brand name' },
+                  model: { type: 'string', example: 'model name' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  // get assignment request per transaction
+  async getAssignmentTransactionDetail(
+    @Res() res: Response,
+    @Param('id') id: string,
+    @Query(GetRequestListDTOPipe) query: GetRequestListDTO,
+  ) {
+    try {
+      query.transactionId = id;
+
+      const list = await this.transactionService.aggregateRequests(
+        getRequestListPipeline(query),
+      );
+
+      let result = { total: 0, data: [] };
+      if (list.length > 0) {
+        result = list[0];
+      }
+
+      await sendResponse(
+        res,
+        new Success('Successfully get assignment transaction detail', result),
+      );
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+
+  @Get(':id/request/options')
+  @ApiOperation({ summary: 'Get assignment transaction Detail Options' })
+  @ApiQuery({ name: 'Query params', type: GetRequestOptionDTO })
+  @ApiQuery({
+    name: 'nameOptions',
+    type: String,
+    example: true,
+    required: false,
+  })
+  @ApiQuery({
+    name: 'brandOptions',
+    type: String,
+    example: true,
+    required: false,
+  })
+  @ApiQuery({
+    name: 'modelOptions',
+    type: String,
+    example: true,
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully get assignment transaction detail options',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'integer', example: 200 },
+        message: {
+          type: 'string',
+          example: 'Successfully get assignment transaction detail options',
+        },
+        data: {
+          type: 'object',
+          properties: {
+            nameOptions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string', example: 'asset name' },
+                  value: { type: 'integer', example: 1 },
+                },
+              },
+            },
+            brandOptions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string', example: 'brand name' },
+                  value: { type: 'integer', example: 1 },
+                },
+              },
+            },
+            modelOptions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string', example: 'model name' },
+                  value: { type: 'integer', example: 1 },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  // get assignment request option per transaction
+  async getAssignmentTransactionDetailOptions(
+    @Res() res: Response,
+    @Param('id') id: string,
+    @Query(GetRequestOptionsDTOPipe) query: GetRequestOptionDTO,
+  ) {
+    try {
+      query.transactionId = id;
+
+      const list = await this.transactionService.aggregateRequests(
+        getRequestOptionPipeline(query),
+      );
+
+      let result = { total: 0, data: [] };
+      if (list.length > 0) {
+        result = list[0];
+      }
+
+      await sendResponse(
+        res,
+        new Success(
+          'Successfully get assignment transaction detail options',
+          result,
         ),
       );
     } catch (error) {
