@@ -7,12 +7,12 @@ import {
   Query,
   Param,
   Delete,
+  Put,
 } from '@nestjs/common';
 import { Success, errorResponse, sendResponse } from 'utils';
 import { Response } from 'express';
 import { PrelistService } from '../services/prelist.service';
 import {
-  ArrayOfIdDTO,
   CreatePrelistDTO,
   GetPrelistDTO,
   GetPrelistDTOPipe,
@@ -22,12 +22,14 @@ import {
   GetPrelistRequestDTOPipe,
   GetPrelistRequestOptionDTO,
   GetPrelistRequestOptionsDTOPipe,
+  UpdatePrelistRequestDTO,
 } from '../dto/prelist.dto';
 import getPrelistOptionPipeline from '../pipeline/getPrelistOption.pipeline';
 import getPrelistPipeline from '../pipeline/getPrelist.pipeline';
 import getPrelistRequestPipeline from '../pipeline/getPrelistRequest.pipeline';
 import getPrelistRequestOptionPipeline from '../pipeline/getPrelistRequestOption.pipeline';
 import { ApiBody, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ArrayOfIdDTO } from '../dto/transaction.dto';
 
 @Controller('/v2/prelist')
 export class PrelistController {
@@ -526,6 +528,47 @@ export class PrelistController {
       await this.prelistService.removePrelists(body.id);
 
       await sendResponse(res, new Success('Successfully delete prelist'));
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+
+  @Put('request/:id')
+  @ApiOperation({
+    summary: 'update assignment request data',
+  })
+  @ApiBody({
+    description: 'Request Body',
+    type: UpdatePrelistRequestDTO,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully update prelist request',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'number', example: 200 },
+        message: {
+          type: 'string',
+          example: 'Successfully update prelist request',
+        },
+      },
+    },
+  })
+  // update assignment request data
+  async updateAssignmentRequest(
+    @Res() res: Response,
+    @Param('id') id: string,
+    @Body() body: UpdatePrelistRequestDTO,
+  ) {
+    try {
+      await this.prelistService.updatePrelistRequest(id, body);
+
+      await sendResponse(
+        res,
+        new Success('Successfully update prelist request'),
+      );
     } catch (error) {
       console.error(error);
       errorResponse(error);

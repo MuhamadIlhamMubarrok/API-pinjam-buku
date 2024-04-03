@@ -171,4 +171,76 @@ export class PrelistService {
       $inc: { totalAssets: -deleteResult.deletedCount },
     });
   }
+
+  async updatePrelistRequest(
+    prelistRequestId: string,
+    data: UpdatePrelistRequestDTO,
+  ) {
+    if (data.assignedTo) {
+      await this.updatePrelistRequestUser(prelistRequestId, data.assignedTo);
+    }
+  }
+
+  async updatePrelistRequestUser(prelistRequestId: string, userId: string) {
+    const loggedInUser: IUser = await this.userModel.findById(this.req.user.id);
+
+    const userData: IUser = await this.userModel.findById(userId);
+
+    if (!userData) {
+      throw new NotFound('user not found');
+    }
+
+    const oldRequestData =
+      await this.prelistRequestModel.findById(prelistRequestId);
+
+    if (!oldRequestData) {
+      throw new NotFound('prelistRequest not found');
+    }
+
+    const updatedRequestData = await this.prelistRequestModel.findByIdAndUpdate(
+      prelistRequestId,
+      {
+        assignedTo: {
+          _id: userData._id,
+          fullName: userData.firstName + ' ' + userData.lastName,
+          key: userData.key,
+        },
+      },
+      { new: true },
+    );
+
+    await this.prelistModel.findOneAndUpdate(
+      {
+        group: oldRequestData.assetGroup,
+        assignedTo: oldRequestData.assignedTo,
+      },
+      {
+        $inc: { totalAssets: -1 },
+      },
+    );
+
+    const updatedPrelistData = await this.prelistModel.findOneAndUpdate(
+      {
+        group: updatedRequestData.assetGroup,
+        assignedTo: updatedRequestData.assignedTo,
+      },
+      {
+        $inc: { totalAssets: 1 },
+      },
+      { new: true },
+    );
+
+    if (!updatedPrelistData) {
+      await this.prelistModel.create({
+        manager: {
+          _id: loggedInUser._id,
+          fullName: loggedInUser.firstName + ' ' + loggedInUser.lastName,
+          key: loggedInUser.key,
+        },
+        group: updatedRequestData.assetGroup,
+        assignedTo: updatedRequestData.assignedTo,
+        totalAssets: 1,
+      });
+    }
+  }
 }

@@ -1,27 +1,7 @@
 import { Injectable, PipeTransform } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  ArrayMinSize,
-  IsArray,
-  IsMongoId,
-  IsNotEmpty,
-  IsOptional,
-} from 'class-validator';
+import { IsArray, IsMongoId, IsNotEmpty, IsOptional } from 'class-validator';
 import { Types } from 'mongoose';
-
-export class ArrayOfIdDTO {
-  @ApiProperty({
-    type: 'array',
-    items: {
-      type: 'string',
-      example: '65ea7d29f5cd331b5beed2b1',
-    },
-  })
-  @IsArray()
-  @IsNotEmpty()
-  @ArrayMinSize(1)
-  id: string[];
-}
 
 export class CreatePrelistDTO {
   @ApiProperty({ type: [String], example: ['65ea6fc61f39f83ef63583ed'] })
@@ -38,8 +18,6 @@ export class CreatePrelistDTO {
 export class GetPrelistDTO {
   @IsOptional()
   search?: string;
-  @IsOptional()
-  prelistId?: string;
 
   @IsOptional()
   page?: string | number;
@@ -58,6 +36,12 @@ export class GetPrelistDTO {
 
   @IsOptional()
   user?: number[] | string;
+
+  @IsOptional()
+  tagId?: string;
+
+  @IsOptional()
+  prelistId?: Types.ObjectId;
 }
 
 @Injectable()
@@ -265,4 +249,11 @@ export class GetPrelistRequestOptionsDTOPipe implements PipeTransform {
 
     return query;
   }
+}
+
+export class UpdatePrelistRequestDTO {
+  @ApiProperty({ type: String, example: '645e40976274c7513437248a' })
+  @IsOptional()
+  @IsMongoId()
+  assignedTo?: string;
 }
