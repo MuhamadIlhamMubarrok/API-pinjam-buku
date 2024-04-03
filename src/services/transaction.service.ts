@@ -111,6 +111,10 @@ export class TransactionService {
     return await this.assignmentApprovalModel.aggregate(pipeline);
   }
 
+  async aggregateTransactions(pipeline: PipelineStage[]): Promise<any[]> {
+    return await this.transactionModel.aggregate(pipeline);
+  }
+
   async generateTransactionId() {
     const currentDate = getCurrentDate();
     const lastTransaction = await this.transactionModel
