@@ -183,12 +183,39 @@ export class GetRequestListDTO {
 
   @IsOptional()
   transactionId?: string;
+
+  @IsOptional()
+  status?: string | string[];
+
+  @IsOptional()
+  group?: string | number[];
+
+  @IsOptional()
+  user?: string | number[];
+
+  @IsOptional()
+  manager?: string | number[];
+
+  @IsOptional()
+  lastUpdate?: string | number[];
 }
 
 @Injectable()
 export class GetRequestListDTOPipe implements PipeTransform {
   transform(query: GetRequestListDTO): GetRequestListDTO {
-    const { page, limit, sortOrder, name, brand, model } = query;
+    const {
+      page,
+      limit,
+      sortOrder,
+      name,
+      brand,
+      model,
+      status,
+      group,
+      user,
+      manager,
+      lastUpdate,
+    } = query;
 
     if (limit) {
       query.limit = parseInt(limit as string);
@@ -214,6 +241,26 @@ export class GetRequestListDTOPipe implements PipeTransform {
       query.model = JSON.parse(model as string);
     }
 
+    if (status) {
+      query.status = JSON.parse(status as string);
+    }
+
+    if (group) {
+      query.group = JSON.parse(group as string);
+    }
+
+    if (user) {
+      query.user = JSON.parse(user as string);
+    }
+
+    if (manager) {
+      query.manager = JSON.parse(manager as string);
+    }
+
+    if (lastUpdate) {
+      query.lastUpdate = JSON.parse(lastUpdate as string);
+    }
+
     return query;
   }
 }
@@ -227,36 +274,46 @@ export class GetRequestOptionDTO extends GetRequestListDTO {
 
   @IsOptional()
   modelOptions?: boolean | string;
+
+  @IsOptional()
+  statusOptions?: boolean | string;
+
+  @IsOptional()
+  groupOptions?: boolean | string;
+
+  @IsOptional()
+  userOptions?: boolean | string;
+
+  @IsOptional()
+  managerOptions?: boolean | string;
 }
 
 @Injectable()
 export class GetRequestOptionsDTOPipe implements PipeTransform {
   transform(query: GetRequestOptionDTO): GetRequestListDTO {
-    const { nameOptions, brandOptions, modelOptions } = query;
+    const {
+      nameOptions,
+      brandOptions,
+      modelOptions,
+      userOptions,
+      groupOptions,
+      statusOptions,
+      managerOptions,
+    } = query;
 
-    if (nameOptions == 'true') {
-      query.nameOptions = true;
-    } else if (nameOptions == 'false') {
-      query.nameOptions = false;
-    } else {
-      query.nameOptions = undefined;
-    }
+    query.nameOptions = nameOptions == 'true' ? true : false;
 
-    if (brandOptions == 'true') {
-      query.brandOptions = true;
-    } else if (brandOptions == 'false') {
-      query.brandOptions = false;
-    } else {
-      query.brandOptions = undefined;
-    }
+    query.brandOptions = brandOptions == 'true' ? true : false;
 
-    if (modelOptions == 'true') {
-      query.modelOptions = true;
-    } else if (modelOptions == 'false') {
-      query.modelOptions = false;
-    } else {
-      query.modelOptions = undefined;
-    }
+    query.modelOptions = modelOptions == 'true' ? true : false;
+
+    query.userOptions = userOptions == 'true' ? true : false;
+
+    query.groupOptions = groupOptions == 'true' ? true : false;
+
+    query.managerOptions = managerOptions == 'true' ? true : false;
+
+    query.statusOptions = statusOptions == 'true' ? true : false;
 
     return query;
   }
@@ -370,25 +427,10 @@ export class CreateTransactionDTO {
   @IsString()
   asset: string;
 
-  @ApiProperty({ type: CreateTransactionAssetNameDTO })
+  @ApiProperty({ type: 'string', example: '65ea7d29f5cd331b5beed2b1' })
   @IsNotEmpty()
-  assetName: CreateTransactionAssetNameDTO;
-
-  @ApiProperty({ type: CreateTransactionAttributeDTO })
-  @IsNotEmpty()
-  assetBrand: CreateTransactionAttributeDTO;
-
-  @ApiProperty({ type: CreateTransactionAttributeDTO })
-  @IsNotEmpty()
-  assetModel: CreateTransactionAttributeDTO;
-
-  @ApiProperty({ type: CreateTransactionAttributeDTO })
-  @IsNotEmpty()
-  assetGroup: CreateTransactionAttributeDTO;
-
-  @ApiProperty({ type: CreateTransactionUserDTO })
-  @IsNotEmpty()
-  user: CreateTransactionUserDTO;
+  @IsString()
+  user: string;
 }
 
 export class UpdateTransactionUser {

@@ -295,6 +295,121 @@ export class TransactionController {
     }
   }
 
+  @Get('history')
+  @ApiOperation({ summary: 'Get assignment request history per transaction' })
+  @ApiQuery({ name: 'Query params', type: GetRequestListDTO })
+  @ApiQuery({
+    type: String,
+    name: 'search',
+    required: false,
+  })
+  @ApiQuery({
+    type: Number,
+    name: 'page',
+    required: false,
+  })
+  @ApiQuery({
+    type: Number,
+    name: 'limit',
+    required: false,
+  })
+  @ApiQuery({
+    type: String,
+    name: 'sortBy',
+    required: false,
+  })
+  @ApiQuery({
+    type: Number,
+    name: 'sortOrder',
+    required: false,
+  })
+  @ApiQuery({
+    type: [Number],
+    name: 'user',
+    required: false,
+  })
+  @ApiQuery({
+    type: [String],
+    name: 'status',
+    required: false,
+  })
+  @ApiQuery({
+    type: [Number],
+    name: 'manager',
+    required: false,
+  })
+  @ApiQuery({
+    type: [Number],
+    name: 'lastUpdate',
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully get assignment request history',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'integer', example: 200 },
+        message: {
+          type: 'string',
+          example: 'Successfully get assignment request history',
+        },
+        data: {
+          type: 'object',
+          properties: {
+            totalRecords: { type: 'integer', example: 3 },
+            data: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  _id: { type: 'string', example: '6603e10ad07e13b634630f1d' },
+                  transactionId: {
+                    type: 'string',
+                    example: '6603e10ad07e13b634630f1d',
+                  },
+                  status: { type: 'string', example: 'Rejected' },
+                  user: { type: 'string', example: 'user name' },
+                  manager: { type: 'string', example: 'manager name' },
+                  totalAsset: { type: 'number', example: 1 },
+                  lastUpdate: {
+                    type: 'string',
+                    example: '2024-04-04T02:17:10.268Z',
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  // get assignmentRequest history grouped by transactionId
+  async getTransactionHistory(
+    @Res() res: Response,
+    @Query(GetRequestListDTOPipe) query: GetRequestListDTO,
+  ) {
+    try {
+      if (!query.status) {
+        query.status = ['Rejected', 'Unassigned'];
+      }
+      const list = await this.transactionService.aggregateRequests(
+        getRequestPerTransactionPipeline(query),
+      );
+
+      let response = { totalRecords: 0, data: [] };
+      if (list.length > 0) {
+        response = list[0];
+      }
+      await sendResponse(
+        res,
+        new Success('Successfully get assignment request history', response),
+      );
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
   @Get(':id')
   @ApiOperation({
     summary: 'Get single detailed assignment transaction data',
