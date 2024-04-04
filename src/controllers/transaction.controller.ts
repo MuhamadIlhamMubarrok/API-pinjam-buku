@@ -351,10 +351,7 @@ export class TransactionController {
     },
   })
   // get single detailed assignment transaction data
-  async getSingleAssignmentTransactionData(
-    @Res() res: Response,
-    @Param('id') id: string,
-  ) {
+  async getTransactionDetail(@Res() res: Response, @Param('id') id: string) {
     try {
       const result = await this.transactionService.getTransactionDetail(id);
 
