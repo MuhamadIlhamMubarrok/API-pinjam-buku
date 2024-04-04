@@ -42,6 +42,7 @@ import getTransactionOptionPipeline from '../pipeline/getTransactionOption.pipel
 import getTransactionListPipeline from '../pipeline/getTransactionList.pipeline';
 import getRequestOptionPipeline from '../pipeline/getRequestOption.pipeline';
 import getRequestListPipeline from '../pipeline/getRequestList.pipeline';
+import getRequestPerTransactionPipeline from '../pipeline/getRequestPerTransaction.pipeline';
 
 @Controller('/v2/transaction')
 export class TransactionController {
