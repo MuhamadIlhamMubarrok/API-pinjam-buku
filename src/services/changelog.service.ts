@@ -38,6 +38,7 @@ export class ChangelogService {
     await this.changelogModel.create({
       ...data,
       modifiedBy: `${user.firstName} ${user.lastName}`,
+      modifiedById: user._id,
     });
   }
 }
