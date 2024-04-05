@@ -3,26 +3,22 @@ import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import { Model, Types, PipelineStage } from 'mongoose';
 import {
-  IAsset,
   IAssignmentApproval,
   IAssignmentRequest,
   IAssignmentTransaction,
-  IFileDamage,
-  IGroup,
   ITransactionLog,
   IUserTransactionRole,
 } from 'schemas';
 import { MongooseConfigService } from '../db/db.config';
 import { TransactionSchema, RequestSchema } from '../models/transaction.model';
-import { UpdateApprovalStatusDTO } from '../dto/transaction.dto';
-import { UserTransactionRoleSchema } from '../models/userTransactionRole.model';
+import {
+  CreateNotificationDTO,
+  UpdateApprovalStatusDTO,
+} from '../dto/transaction.dto';
 import { AssignmentApprovalSchema } from '../models/assignmentApproval.model';
 import { TransactionLogSchema } from '../models/transactionLog.model';
 import { NotificationWebsocketService } from './notification.websocket.service';
-import { FileDamageSchema } from '../models/fileDamage.model';
-import { IUserAssignmentLog } from 'schemas/interfaces/company/log/userAssignmentLog.interface';
-import { UserAssignmentLogSchema } from '../models/userAssignLog.model';
-import { GroupSchema } from '../models/group.model';
+import { TransactionService } from './transaction.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ApprovalService {
@@ -30,16 +26,12 @@ export class ApprovalService {
   private transactionModel: Model<IAssignmentTransaction>;
   private assignmentApprovalModel: Model<IAssignmentApproval>;
   private transactionLogModel: Model<ITransactionLog>;
-  private userAssignmentLogModel: Model<IUserAssignmentLog>;
-  private groupModel: Model<IGroup>;
-  private fileDamageModel: Model<IFileDamage>;
-  private userTransactionRoleModel: Model<IUserTransactionRole>;
-
   constructor(
     @Inject(MongooseConfigService)
     private connectionManager: MongooseConfigService,
     @Inject(REQUEST)
     private req: Request,
+    private transactionService: TransactionService,
     private readonly notificationWsClient: NotificationWebsocketService,
   ) {
     this.setConnection();
@@ -56,11 +48,6 @@ export class ApprovalService {
       'assignment_request',
       RequestSchema,
     )) as Model<IAssignmentRequest>;
-    this.userTransactionRoleModel = (await this.connectionManager.getModel(
-      `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
-      'user_transaction_role',
-      UserTransactionRoleSchema,
-    )) as Model<IUserTransactionRole>;
     this.assignmentApprovalModel = (await this.connectionManager.getModel(
       `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
       'assignment_approval',
@@ -71,21 +58,6 @@ export class ApprovalService {
       'transaction_log',
       TransactionLogSchema,
     )) as Model<ITransactionLog>;
-    this.fileDamageModel = (await this.connectionManager.getModel(
-      `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
-      'file_damage',
-      FileDamageSchema,
-    )) as Model<IFileDamage>;
-    this.userAssignmentLogModel = (await this.connectionManager.getModel(
-      `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
-      'user_assignment_log',
-      UserAssignmentLogSchema,
-    )) as Model<IUserAssignmentLog>;
-    this.groupModel = (await this.connectionManager.getModel(
-      `mongodb://127.0.0.1:27017/${this.req?.user?.companyCode || 'error'}_tagsamurai`,
-      'groups',
-      GroupSchema,
-    )) as Model<IGroup>;
   };
 
   async aggregateApprovals(pipeline: PipelineStage[]): Promise<any[]> {
@@ -192,38 +164,49 @@ export class ApprovalService {
       await this.activateNextApprovalLevel(
         nextLevelApprovalData[0].level,
         String(nextLevelApprovalData[0].transaction),
+        nextLevelApprovalData[0].request,
       );
     } else {
       await this.approveRequest(String(request));
     }
   }
 
-  async activateNextApprovalLevel(level: number, transaction: string) {
+  async activateNextApprovalLevel(
+    level: number,
+    transaction: string,
+    request: Types.ObjectId,
+  ) {
     await this.assignmentApprovalModel.updateMany(
       { level, transaction, status: 'Pending' },
       { status: 'Need Approval' },
     );
 
-    //Send ke user2 dengan approval level baru
-    // let pendingNotification: CreateNotificationDTO[];
-    // for (const approvalData of nextLevelApprovalData) {
-    //   pendingNotification.push({
-    //     user: approvalData.user._id.toString(),
-    //     title: 'Waiting for Assignment Approval',
-    //     detail: updatedData.transactionId,
-    //     isReadOnly: true,
-    //     isManager: false,
-    //     severity: 'warning',
-    //     data: {
-    //       transaction: updatedData.transaction,
-    //       request: updatedData.request,
-    //     },
-    //   });
-    // }
-    // this.notificationWsClient.sendNotification(
-    //   this.req.user.companyCode,
-    //   pendingNotification,
-    // );
+    const nextLevelApprovalData = await this.assignmentApprovalModel.find({
+      request: request,
+      level: level,
+      status: 'Need Approval',
+    });
+
+    // Send ke user2 dengan approval level baru
+    const pendingNotification: CreateNotificationDTO[] = [];
+    for (const approvalData of nextLevelApprovalData) {
+      pendingNotification.push({
+        user: approvalData.user._id.toString(),
+        title: 'Waiting for Assignment Approval',
+        detail: approvalData.transactionId,
+        isReadOnly: true,
+        isManager: false,
+        severity: 'warning',
+        data: {
+          transaction: approvalData.transaction,
+          request: approvalData.request,
+        },
+      });
+    }
+    this.notificationWsClient.sendNotification(
+      this.req.user.companyCode,
+      pendingNotification,
+    );
   }
 
   async approveRequest(request: string) {
@@ -274,46 +257,48 @@ export class ApprovalService {
         updatedData.level,
       );
     }
-    //   updatedData.transaction,
-    // );
+    const transactionData = await this.transactionModel.findById(
+      updatedData.transaction,
+    );
 
-    // let pendingNotification: CreateNotificationDTO[];
+    const pendingNotification: CreateNotificationDTO[] = [];
 
-    // pendingNotification.push({
-    //   user: transactionData.manager._id.toString(),
-    //   title: 'Assignment Request Rejected',
-    //   detail: updatedData.transactionId,
-    //   isReadOnly: true,
-    //   isManager: true,
-    //   severity: 'danger',
-    //   data: {
-    //     transaction: updatedData.transaction,
-    //     request: updatedData.request,
-    //   },
-    // });
+    pendingNotification.push({
+      user: transactionData.manager._id.toString(),
+      title: 'Assignment Request Rejected',
+      detail: updatedData.transactionId,
+      isReadOnly: true,
+      isManager: true,
+      severity: 'danger',
+      data: {
+        transaction: updatedData.transaction,
+        request: updatedData.request,
+      },
+    });
 
-    // const managers: IUserTransactionRole[] = await this.getManagersPerRole(
-    //   transactionData.group._id,
-    //   'borrowingRole',
-    // );
-    // for (const manager of managers) {
-    //   pendingNotification.push({
-    //     user: manager.user._id.toString(),
-    //     title: 'Assigment Request Rejected',
-    //     detail: updatedData.transactionId,
-    //     isReadOnly: true,
-    //     isManager: true,
-    //     severity: 'danger',
-    //     data: {
-    //       transaction: updatedData.transaction,
-    //       request: updatedData.request,
-    //     },
-    //   });
-    // }
-    // this.notificationWsClient.sendNotification(
-    //   this.req.user.companyCode,
-    //   pendingNotification,
-    // );
+    const managers: IUserTransactionRole[] =
+      await this.transactionService.getManagersPerRole(
+        transactionData.group._id,
+        'borrowingRole',
+      );
+    for (const manager of managers) {
+      pendingNotification.push({
+        user: manager.user._id.toString(),
+        title: 'Assigment Request Rejected',
+        detail: updatedData.transactionId,
+        isReadOnly: true,
+        isManager: true,
+        severity: 'danger',
+        data: {
+          transaction: updatedData.transaction,
+          request: updatedData.request,
+        },
+      });
+    }
+    this.notificationWsClient.sendNotification(
+      this.req.user.companyCode,
+      pendingNotification,
+    );
   }
 
   async rejectRequest(transaction: string, request: string, level: number) {
