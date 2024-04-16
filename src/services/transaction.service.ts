@@ -591,6 +591,20 @@ export class TransactionService {
       );
     }
   }
+  async editTransaction(
+    _id: string | Types.ObjectId,
+    destinationGroup: number,
+  ) {
+    const destinationGroupData = await this.groupModel.findOne({
+      key: destinationGroup,
+    });
+
+    return await this.transactionModel.findOneAndUpdate(
+      { _id },
+      { destinationGroup: destinationGroupData },
+      { new: true },
+    );
+  }
 
   async approveRequest(datas: UpdateApprovalStatusDTO[]) {
     for (const data of datas) {

@@ -22,6 +22,7 @@ import { Response } from 'express';
 import {
   ArrayOfIdDTO,
   CreateTransactionDTO,
+  EditDestinationDTO,
   GetRequestListDTO,
   GetRequestListDTOPipe,
   GetRequestOptionDTO,
@@ -1015,6 +1016,44 @@ export class TransactionController {
         res,
         new Created('Successfully created transaction', result),
       );
+    } catch (error) {
+      console.error(error);
+      errorResponse(error);
+    }
+  }
+
+  @Put(':id')
+  @ApiOperation({
+    summary: 'update transaction confirmation email',
+  })
+  @ApiBody({
+    description: 'Request Body',
+    type: EditDestinationDTO,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully update transaction',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'number', example: 200 },
+        message: {
+          type: 'string',
+          example: 'Successfully update transaction',
+        },
+      },
+    },
+  })
+  // update confirmation email inside assignmentTransaction
+  async editTransaction(
+    @Res() res: Response,
+    @Param('id') id: string,
+    @Body() body: EditDestinationDTO,
+  ) {
+    try {
+      await this.transactionService.editTransaction(id, body.destinationGroup);
+
+      await sendResponse(res, new Created('Successfully update transaction'));
     } catch (error) {
       console.error(error);
       errorResponse(error);

@@ -6,6 +6,7 @@ import {
   IsIn,
   IsMongoId,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
@@ -438,4 +439,10 @@ export class UpdateTransactionUser {
   @IsNotEmpty()
   @IsMongoId()
   user: string;
+}
+export class EditDestinationDTO {
+  @ApiProperty({ type: Number, example: 1 })
+  @IsNotEmpty()
+  @IsNumber()
+  destinationGroup: number;
 }
