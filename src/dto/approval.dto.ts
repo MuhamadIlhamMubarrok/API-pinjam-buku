@@ -1,13 +1,17 @@
 import { Injectable, PipeTransform } from '@nestjs/common';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsMongoId, IsOptional } from 'class-validator';
 
 export class GetApprovalListDTO {
+  @ApiPropertyOptional({ type: 'string', example: 'username_1' })
   @IsOptional()
   search?: string;
 
+  @ApiPropertyOptional({ type: 'number', example: 1 })
   @IsOptional()
   page?: string | number;
 
+  @ApiPropertyOptional({ type: 'number', example: 1 })
   @IsOptional()
   limit?: string | number;
 

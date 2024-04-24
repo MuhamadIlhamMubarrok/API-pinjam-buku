@@ -1,30 +1,39 @@
 import { Injectable, PipeTransform } from '@nestjs/common';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsDefined, IsOptional } from 'class-validator';
 import { Types } from 'mongoose';
 
 export class GetGroupDTO {
+  @ApiPropertyOptional({ type: 'string', example: 'username_1' })
   @IsOptional()
   search?: string;
 
+  @ApiPropertyOptional({ type: 'number', example: 1 })
   @IsOptional()
   page?: string | number;
 
+  @ApiPropertyOptional({ type: 'number', example: 1 })
   @IsOptional()
   limit?: string | number;
 
+  @ApiPropertyOptional({ type: 'string', example: '[1]' })
   @IsOptional()
   groups?: number[] | string;
 
+  @ApiPropertyOptional({ type: 'string', example: '[false]' })
   @IsOptional()
   isActive?: boolean[] | string;
 
+  @ApiPropertyOptional({ type: 'string', example: 'group' })
   @IsOptional()
   sortBy?: string;
 
+  @ApiPropertyOptional({ type: 'number', example: 1 })
   @IsOptional()
   sortOrder?: string | number;
 }
 export class GetGroupOptionsDTO extends GetGroupDTO {
+  @ApiPropertyOptional({ type: 'boolean', example: true })
   @IsOptional()
   groupOptions?: string | boolean;
 }
@@ -80,13 +89,16 @@ export class GetGroupDTOPipe implements PipeTransform {
 }
 
 export class CreateGroupDTO {
+  @ApiPropertyOptional({ type: 'string', example: '[1]' })
   @IsString()
   @IsDefined()
   name: string;
 
+  @ApiPropertyOptional({ type: 'number', example: 1 })
   @IsOptional()
   quota: number;
 
+  @ApiPropertyOptional({ type: 'string', example: '65f9344de4f427fe9c7f064b' })
   @IsOptional()
   parent?: Types.ObjectId;
 }
