@@ -31,9 +31,9 @@
     "eslint-plugin-sonarjs": "^0.23.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
-    "schemas": "github:be-fixedassetv2/tsv2-schemas#main",
+    "schemas": "github:MuhamadIlhamMubarrok/schemas#main",
     "socket.io-client": "^4.7.5",
-    "utils": "github:be-fixedassetv2/tsv2-utils#main",
+    "utils": "github:MuhamadIlhamMubarrok/utils#main",
     "ws": "^8.16.0"
   },
   "devDependencies": {

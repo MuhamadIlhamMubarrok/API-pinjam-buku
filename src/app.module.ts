@@ -1,11 +1,6 @@
-import { Module, MiddlewareConsumer } from '@nestjs/common';
-import { AuthMiddleware } from 'utils';
-import { GroupModule } from './modules/group.module';
+import { Module } from '@nestjs/common';
+import { LibraryModule } from './modules/library.module';
 @Module({
-  imports: [GroupModule],
+  imports: [LibraryModule],
 })
-export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(AuthMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}
